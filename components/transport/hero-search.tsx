@@ -4,10 +4,11 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowRightLeft, Info, MapPin, Search, Users } from "lucide-react"
 import type { Lang } from "@/lib/i18n"
-import { cities, dictionary, displayFont } from "@/lib/i18n"
+import { dictionary, displayFont } from "@/lib/i18n"
+import type { CityOption } from "@/lib/supabase/queries"
 import { DatePicker } from "./date-picker"
 
-export function HeroSearch({ lang }: { lang: Lang }) {
+export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] }) {
   const t = dictionary[lang]
   const router = useRouter()
   const [origin, setOrigin] = useState("")
@@ -21,8 +22,8 @@ export function HeroSearch({ lang }: { lang: Lang }) {
 
   function submit(e: React.FormEvent) {
     e.preventDefault()
-    const from = origin || cities[0].en
-    const to = destination && destination !== from ? destination : cities[1].en
+    const from = origin || cities[0]?.nameEn || ""
+    const to = destination && destination !== from ? destination : cities[1]?.nameEn || ""
     const params = new URLSearchParams({ from, to })
     if (date) params.set("date", date)
     router.push(`/search?${params.toString()}`)
@@ -84,8 +85,8 @@ export function HeroSearch({ lang }: { lang: Lang }) {
               >
                 <option value="">{t.hero.originPlaceholder}</option>
                 {cities.map((c) => (
-                  <option key={c.en} value={c.en}>
-                    {c[lang]}
+                  <option key={c.id} value={c.nameEn}>
+                    {lang === "fa" ? c.nameFa : c.nameEn}
                   </option>
                 ))}
               </select>
@@ -114,8 +115,8 @@ export function HeroSearch({ lang }: { lang: Lang }) {
               >
                 <option value="">{t.hero.destinationPlaceholder}</option>
                 {cities.map((c) => (
-                  <option key={c.en} value={c.en}>
-                    {c[lang]}
+                  <option key={c.id} value={c.nameEn}>
+                    {lang === "fa" ? c.nameFa : c.nameEn}
                   </option>
                 ))}
               </select>

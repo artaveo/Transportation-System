@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { useSearchParams } from "next/navigation"
 import {
   ArrowLeftRight,
   BatteryCharging,
@@ -12,9 +11,10 @@ import {
   Sofa,
   Wifi,
 } from "lucide-react"
-import { cities, dictionary, displayFont, localizeNumber } from "@/lib/i18n"
+import { dictionary, displayFont, localizeNumber } from "@/lib/i18n"
 import { useLang } from "@/lib/lang-context"
-import { cityLabel, formatTime, getTrips, type AmenityKey, type BusType, type Trip } from "@/lib/booking-data"
+import { formatTime, type AmenityKey, type BusType } from "@/lib/booking-data"
+import type { CityOption, SearchTrip } from "@/lib/supabase/queries"
 import { SiteHeader } from "./site-header"
 import { SiteFooter } from "./site-footer"
 
@@ -28,22 +28,42 @@ const amenityIcons: Record<AmenityKey, typeof Snowflake> = {
 
 type SortKey = "earliest" | "cheapest" | "fastest"
 
-function timeBand(depart: number): "morning" | "afternoon" | "evening" {
+// null یعنی سفر fill_and_go بدون ساعت حرکت ثابت — در فیلتر «زمان حرکت»
+// جزو هیچ‌کدام از سه بازه حساب نمی‌شود (چون واقعاً نامشخص است، نه این‌که
+// حدس زده شود).
+function timeBand(depart: number | null): "morning" | "afternoon" | "evening" | null {
+  if (depart === null) return null
   const h = Math.floor(depart / 60)
   if (h >= 5 && h < 12) return "morning"
   if (h >= 12 && h < 17) return "afternoon"
   return "evening"
 }
 
-export function SearchResults() {
-  const params = useSearchParams()
+export function SearchResults({
+  cities,
+  fromEn,
+  toEn,
+  date,
+  trips: allTrips,
+}: {
+  cities: CityOption[]
+  fromEn: string
+  toEn: string
+  date: string
+  trips: SearchTrip[]
+}) {
   const { lang } = useLang()
   const t = dictionary[lang]
 
-  const fromEn = params.get("from") && cities.some((c) => c.en === params.get("from")) ? params.get("from")! : cities[0].en
-  const toEnRaw = params.get("to") && cities.some((c) => c.en === params.get("to")) ? params.get("to")! : cities[1].en
-  const toEn = toEnRaw === fromEn ? cities.find((c) => c.en !== fromEn)!.en : toEnRaw
-  const date = params.get("date") || ""
+  function cityLabel(nameEn: string): string {
+    const c = cities.find((x) => x.nameEn === nameEn)
+    return c ? (lang === "fa" ? c.nameFa : c.nameEn) : nameEn
+  }
+
+  // چند تاریخ متفاوت در نتیجه هست یا نه — وقتی کاربر تاریخ انتخاب نکرده،
+  // /app/search/page.tsx همهٔ سفرهای از امروز به بعد را برمی‌گرداند، پس
+  // هر کارت باید تاریخ خودش را جداگانه نشان دهد.
+  const showsMultipleDates = !date
 
   const [sort, setSort] = useState<SortKey>("earliest")
   const [busTypes, setBusTypes] = useState<Set<BusType>>(new Set())
@@ -51,9 +71,8 @@ export function SearchResults() {
   const [bands, setBands] = useState<Set<"morning" | "afternoon" | "evening">>(new Set())
   const [filtersOpen, setFiltersOpen] = useState(false)
 
-  const allTrips = useMemo(() => getTrips(fromEn, toEn), [fromEn, toEn])
-
   const priceBounds = useMemo(() => {
+    if (allTrips.length === 0) return { min: 0, max: 0 }
     const prices = allTrips.map((tr) => tr.price)
     return { min: Math.min(...prices), max: Math.max(...prices) }
   }, [allTrips])
@@ -68,7 +87,10 @@ export function SearchResults() {
   const trips = useMemo(() => {
     let list = allTrips.filter((trip) => {
       if (busTypes.size && !busTypes.has(trip.busType)) return false
-      if (bands.size && !bands.has(timeBand(trip.departMinutes))) return false
+      if (bands.size) {
+        const band = timeBand(trip.departMinutes)
+        if (!band || !bands.has(band)) return false
+      }
       if (amenities.size && ![...amenities].every((a) => trip.amenities.includes(a))) return false
       if (trip.price > maxPrice) return false
       return true
@@ -76,7 +98,11 @@ export function SearchResults() {
     list = [...list].sort((a, b) => {
       if (sort === "cheapest") return a.price - b.price
       if (sort === "fastest") return a.durationMinutes - b.durationMinutes
-      return a.departMinutes - b.departMinutes
+      // سفرهای fill_and_go (بدون ساعت مشخص) در مرتب‌سازیِ «زودترین حرکت»
+      // بعد از همهٔ سفرهای دارای ساعت ثابت قرار می‌گیرند.
+      const aDepart = a.departMinutes ?? Number.POSITIVE_INFINITY
+      const bDepart = b.departMinutes ?? Number.POSITIVE_INFINITY
+      return aDepart - bDepart
     })
     return list
   }, [allTrips, busTypes, bands, amenities, sort, maxPrice])
@@ -105,11 +131,11 @@ export function SearchResults() {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-5 py-4 sm:px-8">
           <div className="flex items-center gap-3">
             <span className={`${displayFont(lang)} text-lg font-semibold text-foreground sm:text-xl`}>
-              {cityLabel(fromEn, lang)}
+              {cityLabel(fromEn)}
             </span>
             <ArrowLeftRight className="size-4 text-primary" aria-hidden="true" />
             <span className={`${displayFont(lang)} text-lg font-semibold text-foreground sm:text-xl`}>
-              {cityLabel(toEn, lang)}
+              {cityLabel(toEn)}
             </span>
             {dateLabel && <span className="text-sm text-muted-foreground">· {dateLabel}</span>}
           </div>
@@ -259,7 +285,9 @@ export function SearchResults() {
                 {t.search.noResults}
               </div>
             ) : (
-              trips.map((trip) => <TripCard key={trip.id} trip={trip} lang={lang} date={date} />)
+              trips.map((trip) => (
+                <TripCard key={trip.id} trip={trip} lang={lang} showDate={showsMultipleDates} />
+              ))
             )}
           </div>
         </div>
@@ -270,24 +298,48 @@ export function SearchResults() {
   )
 }
 
-function TripCard({ trip, lang, date }: { trip: Trip; lang: "fa" | "en"; date: string }) {
+function TripCard({
+  trip,
+  lang,
+  showDate,
+}: {
+  trip: SearchTrip
+  lang: "fa" | "en"
+  showDate: boolean
+}) {
   const t = dictionary[lang]
-  const arrive = trip.departMinutes + trip.durationMinutes
+  const hasFixedTime = trip.departMinutes !== null
+  const arrive = hasFixedTime ? trip.departMinutes! + trip.durationMinutes : null
   const hours = Math.floor(trip.durationMinutes / 60)
   const mins = trip.durationMinutes % 60
   const isFull = trip.seatsLeft === 0
-  const seatsParams = new URLSearchParams()
-  if (date) seatsParams.set("date", date)
+  const seatsParams = new URLSearchParams({ date: trip.serviceDate })
+  const tripDateLabel = showDate
+    ? new Date(trip.serviceDate + "T00:00:00").toLocaleDateString(lang === "fa" ? "fa-AF-u-nu-arabext" : "en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      })
+    : null
 
   return (
     <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
         <div className="flex items-center gap-3">
           <div className="text-center">
-            <p className={`${displayFont(lang)} text-xl font-semibold text-foreground`} dir="ltr">
-              {formatTime(trip.departMinutes, lang)}
+            {hasFixedTime ? (
+              <p className={`${displayFont(lang)} text-xl font-semibold text-foreground`} dir="ltr">
+                {formatTime(trip.departMinutes!, lang)}
+              </p>
+            ) : (
+              <p className={`${displayFont(lang)} text-sm font-semibold text-primary`}>
+                {t.search.flexibleDeparture}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              {tripDateLabel ? `${tripDateLabel} · ` : ""}
+              {t.search.departure}
             </p>
-            <p className="text-xs text-muted-foreground">{t.search.departure}</p>
           </div>
           <div className="flex flex-col items-center px-2">
             <span className="text-xs text-muted-foreground">
@@ -305,9 +357,13 @@ function TripCard({ trip, lang, date }: { trip: Trip; lang: "fa" | "en"; date: s
             </span>
           </div>
           <div className="text-center">
-            <p className={`${displayFont(lang)} text-xl font-semibold text-foreground`} dir="ltr">
-              {formatTime(arrive, lang)}
-            </p>
+            {hasFixedTime ? (
+              <p className={`${displayFont(lang)} text-xl font-semibold text-foreground`} dir="ltr">
+                {formatTime(arrive!, lang)}
+              </p>
+            ) : (
+              <p className={`${displayFont(lang)} text-xl font-semibold text-muted-foreground`}>—</p>
+            )}
             <p className="text-xs text-muted-foreground">{t.search.arrival}</p>
           </div>
         </div>

@@ -241,6 +241,7 @@ export const dictionary = {
       upTo: "تا",
       noResults: "برای این مسیر سرویسی یافت نشد.",
       hours: "ساعت",
+      flexibleDeparture: "بر اساس تکمیل ظرفیت",
     },
     amenities: {
       ac: "تهویهٔ مطبوع",
@@ -821,6 +822,7 @@ export const dictionary = {
       upTo: "Up to",
       noResults: "No trips found for this route.",
       hours: "h",
+      flexibleDeparture: "Departs when full",
     },
     amenities: {
       ac: "Air conditioning",
