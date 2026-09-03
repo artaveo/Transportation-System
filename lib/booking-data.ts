@@ -3,6 +3,14 @@ import { cities, type Lang } from "@/lib/i18n"
 export type AmenityKey = "ac" | "wifi" | "charging" | "refreshment" | "reclining"
 export type BusType = "vip" | "standard"
 
+/**
+ * حداکثر تعداد چوکی قابل‌انتخاب در یک رزرو — طبق FAQ سایت («در هر رزرو تا
+ * شش چوکی قابل انتخاب است»، lib/i18n.ts → faq.groups[0].items[1]). یک منبع
+ * واحد چون هم UI (seat-selection.tsx) و هم API سرور (app/api/bookings/hold)
+ * باید دقیقاً همین عدد را اعمال کنند.
+ */
+export const MAX_SEATS_PER_BOOKING = 6
+
 export type Trip = {
   id: string
   fromEn: string

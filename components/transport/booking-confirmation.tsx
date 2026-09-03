@@ -2,11 +2,11 @@
 
 import { useMemo } from "react"
 import Link from "next/link"
-import { useSearchParams } from "next/navigation"
 import { ArrowLeftRight, CalendarPlus, CircleCheck, Download, LifeBuoy } from "lucide-react"
 import { dictionary, displayFont, localizeNumber } from "@/lib/i18n"
 import { useLang } from "@/lib/lang-context"
-import { cityLabel, formatTime, getTripById, hash, pricing } from "@/lib/booking-data"
+import { cityLabel, formatTime, hash } from "@/lib/booking-data"
+import type { BookingDetail } from "@/lib/supabase/queries"
 import { SiteHeader } from "./site-header"
 
 /**
@@ -41,52 +41,34 @@ function QrPlaceholder({ seedValue }: { seedValue: string }) {
   )
 }
 
-export function BookingConfirmation({ tripId }: { tripId: string }) {
-  const params = useSearchParams()
+export function BookingConfirmation({ booking }: { booking: BookingDetail }) {
   const { lang } = useLang()
   const t = dictionary[lang]
+  const { trip } = booking
 
-  const trip = getTripById(tripId)
-  const seats = useMemo(() => (params.get("seats") || "").split(",").filter(Boolean), [params])
-  const ref = params.get("ref") || ""
-  const name = params.get("name") || ""
-  const date = params.get("date") || ""
-
-  if (!trip || seats.length === 0 || !ref) {
-    return (
-      <div className="min-h-screen bg-background">
-        <SiteHeader />
-        <div className="mx-auto max-w-xl px-5 py-24 text-center">
-          <p className="text-muted-foreground">{t.search.noResults}</p>
-          <Link href="/" className="mt-4 inline-block text-primary hover:underline">
-            {t.confirm.home}
-          </Link>
-        </div>
-      </div>
-    )
-  }
-
-  const { grandTotal } = pricing(trip.price, seats.length)
-  const dateLabel = date
-    ? new Date(date + "T00:00:00").toLocaleDateString(lang === "fa" ? "fa-AF-u-nu-arabext" : "en-US", {
-        weekday: "long",
-        month: "long",
-        day: "numeric",
-      })
-    : "—"
+  const dateLabel = new Date(trip.serviceDate + "T00:00:00").toLocaleDateString(
+    lang === "fa" ? "fa-AF-u-nu-arabext" : "en-US",
+    { weekday: "long", month: "long", day: "numeric" },
+  )
+  const seatsLabel = booking.passengers.map((p) => p.seatNumber).join("، ")
 
   function addToCalendar() {
-    const day = date || new Date().toISOString().slice(0, 10)
-    const h = Math.floor(trip!.departMinutes / 60)
-    const m = trip!.departMinutes % 60
-    const startsAt = `${day.replace(/-/g, "")}T${String(h).padStart(2, "0")}${String(m).padStart(2, "0")}00`
+    const day = trip.serviceDate.replace(/-/g, "")
+    let dtLine: string
+    if (trip.departMinutes !== null) {
+      const h = Math.floor(trip.departMinutes / 60)
+      const m = trip.departMinutes % 60
+      dtLine = `DTSTART:${day}T${String(h).padStart(2, "0")}${String(m).padStart(2, "0")}00`
+    } else {
+      dtLine = `DTSTART;VALUE=DATE:${day}`
+    }
     const ics = [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
       "BEGIN:VEVENT",
-      `SUMMARY:${dictionary[lang].brand} — ${cityLabel(trip!.fromEn, lang)} \u2192 ${cityLabel(trip!.toEn, lang)}`,
-      `DTSTART:${startsAt}`,
-      `DESCRIPTION:${t.confirm.ref}: ${ref}`,
+      `SUMMARY:${dictionary[lang].brand} — ${cityLabel(trip.fromEn, lang)} \u2192 ${cityLabel(trip.toEn, lang)}`,
+      dtLine,
+      `DESCRIPTION:${t.confirm.ref}: ${booking.bookingReference}`,
       "END:VEVENT",
       "END:VCALENDAR",
     ].join("\r\n")
@@ -94,7 +76,7 @@ export function BookingConfirmation({ tripId }: { tripId: string }) {
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = `${ref}.ics`
+    a.download = `${booking.bookingReference}.ics`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -110,6 +92,11 @@ export function BookingConfirmation({ tripId }: { tripId: string }) {
           </span>
           <h1 className={`${displayFont(lang)} text-2xl font-semibold text-foreground`}>{t.confirm.title}</h1>
           <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">{t.confirm.subtitle}</p>
+          {booking.status === "pending" && (
+            <p className="mt-3 rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">
+              {booking.paymentMethod === "offline" ? t.confirm.statusPendingOffline : t.confirm.statusPendingOnline}
+            </p>
+          )}
         </div>
 
         <div className="overflow-hidden rounded-2xl border border-border bg-card">
@@ -117,10 +104,10 @@ export function BookingConfirmation({ tripId }: { tripId: string }) {
             <div>
               <span className="block text-xs text-muted-foreground">{t.confirm.ref}</span>
               <span className={`${displayFont(lang)} text-lg font-semibold tracking-wide text-primary`} dir="ltr">
-                {ref}
+                {booking.bookingReference}
               </span>
             </div>
-            <QrPlaceholder seedValue={ref} />
+            <QrPlaceholder seedValue={booking.bookingReference} />
           </div>
 
           <dl className="flex flex-col gap-3 px-6 py-5 text-sm">
@@ -138,22 +125,22 @@ export function BookingConfirmation({ tripId }: { tripId: string }) {
             </div>
             <div className="flex justify-between">
               <dt className="text-muted-foreground">{t.confirm.departure}</dt>
-              <dd className="font-medium text-foreground" dir="ltr">{formatTime(trip.departMinutes, lang)}</dd>
+              <dd className="font-medium text-foreground" dir="ltr">
+                {trip.departMinutes !== null ? formatTime(trip.departMinutes, lang) : t.search.flexibleDeparture}
+              </dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-muted-foreground">{t.confirm.seats}</dt>
-              <dd className={`${displayFont(lang)} font-medium text-foreground`}>{seats.join("، ")}</dd>
+              <dd className={`${displayFont(lang)} font-medium text-foreground`}>{seatsLabel}</dd>
             </div>
-            {name && (
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">{t.confirm.passenger}</dt>
-                <dd className="font-medium text-foreground">{name}</dd>
-              </div>
-            )}
+            <div className="flex justify-between">
+              <dt className="text-muted-foreground">{t.confirm.passenger}</dt>
+              <dd className="font-medium text-foreground">{booking.contactName}</dd>
+            </div>
             <div className="flex justify-between border-t border-border/60 pt-3 text-base">
               <dt className="font-semibold text-foreground">{t.confirm.amount}</dt>
               <dd className={`${displayFont(lang)} font-semibold text-foreground`}>
-                {localizeNumber(grandTotal, lang)} {t.routes.currency}
+                {localizeNumber(booking.totalAmount, lang)} {t.routes.currency}
               </dd>
             </div>
           </dl>

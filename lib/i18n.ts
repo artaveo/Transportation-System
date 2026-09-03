@@ -272,6 +272,9 @@ export const dictionary = {
       statusBooked: "رزروشده",
       statusSelected: "انتخاب‌شده",
       layoutNote: "چیدمان این سرویس",
+      holdError: "متأسفانه یکی از چوکی‌های انتخابی هم‌زمان توسط مسافر دیگری رزرو شد. نقشهٔ چوکی به‌روزرسانی شد؛ لطفاً دوباره انتخاب کنید.",
+      holdErrorGeneric: "مشکلی در قفل‌کردن چوکی پیش آمد. لطفاً دوباره تلاش کنید.",
+      holding: "در حال بررسی...",
     },
     checkout: {
       title: "تکمیل رزرو",
@@ -311,6 +314,15 @@ export const dictionary = {
       termsLink: "مشاهدهٔ شرایط و ضوابط",
       privacyLink: "حریم خصوصی",
       termsRequired: "برای ادامه باید شرایط و ضوابط را بپذیرید",
+      couponTitle: "کد تخفیف (اختیاری)",
+      couponPh: "مثلاً SHABRAW10",
+      couponInvalid: "این کد تخفیف معتبر نیست یا منقضی شده است.",
+      couponAppliedAtConfirm: "کد تخفیف پس از ثبت نهایی رزرو محاسبه و در صفحهٔ تأییدیه نشان داده می‌شود.",
+      onlinePendingNote:
+        "درگاه پرداخت آنلاین (HesabPay) هنوز به‌طور کامل وصل نشده؛ رزرو شما با وضعیت «در انتظار تأیید» ثبت می‌شود و اپراتور به‌زودی با شما تماس می‌گیرد.",
+      holdExpired: "مهلت نگه‌داشتن چوکی‌های شما به پایان رسیده. لطفاً به صفحهٔ انتخاب چوکی برگردید و دوباره انتخاب کنید.",
+      genericError: "ثبت رزرو با مشکل مواجه شد. لطفاً دوباره تلاش کنید.",
+      submitting: "در حال ثبت رزرو...",
     },
     confirm: {
       title: "بلیت شما صادر شد",
@@ -331,6 +343,8 @@ export const dictionary = {
       supportNote:
         "[PLACEHOLDER — نیاز به شمارهٔ پشتیبانی واقعی شرکت] در صورت هرگونه مشکل پیش از یا حین سفر، از طریق صفحهٔ تماس با ما یا نزدیک‌ترین دفتر با ما در ارتباط باشید.",
       contactOffices: "مشاهدهٔ دفاتر پشتیبانی",
+      statusPendingOffline: "در انتظار تأیید پرداخت — لطفاً هنگام سوار شدن یا در دفتر پرداخت را نهایی کنید.",
+      statusPendingOnline: "در انتظار تأیید پرداخت آنلاین — اپراتور به‌زودی با شما تماس می‌گیرد.",
     },
     about: {
       kicker: "دربارهٔ ما",
@@ -853,6 +867,9 @@ export const dictionary = {
       statusBooked: "booked",
       statusSelected: "selected",
       layoutNote: "This service's layout",
+      holdError: "Unfortunately one of your selected seats was just booked by another passenger. The seat map has been refreshed; please choose again.",
+      holdErrorGeneric: "Something went wrong locking your seats. Please try again.",
+      holding: "Checking...",
     },
     checkout: {
       title: "Complete your booking",
@@ -892,6 +909,15 @@ export const dictionary = {
       termsLink: "View terms & conditions",
       privacyLink: "Privacy policy",
       termsRequired: "You must accept the terms to continue",
+      couponTitle: "Coupon code (optional)",
+      couponPh: "e.g. SHABRAW10",
+      couponInvalid: "This coupon code is invalid or expired.",
+      couponAppliedAtConfirm: "The coupon discount is calculated once you confirm the booking, and shown on the confirmation page.",
+      onlinePendingNote:
+        "The online payment gateway (HesabPay) isn't fully connected yet; your booking will be created as \"pending confirmation\" and an operator will contact you shortly.",
+      holdExpired: "Your seat hold has expired. Please go back to seat selection and choose again.",
+      genericError: "We couldn't complete your booking. Please try again.",
+      submitting: "Submitting booking...",
     },
     confirm: {
       title: "Your booking is confirmed",
@@ -912,6 +938,8 @@ export const dictionary = {
       supportNote:
         "[PLACEHOLDER — needs the company's real support number] If anything comes up before or during your trip, reach us through the contact page or your nearest office.",
       contactOffices: "View support offices",
+      statusPendingOffline: "Pending payment confirmation — please pay when boarding or at an office.",
+      statusPendingOnline: "Pending online payment confirmation — an operator will contact you shortly.",
     },
     about: {
       kicker: "About us",

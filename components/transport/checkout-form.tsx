@@ -2,11 +2,12 @@
 
 import { useMemo, useState } from "react"
 import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { ArrowLeftRight, Building, ChevronLeft, ChevronRight, CreditCard, Luggage, Smartphone } from "lucide-react"
 import { dictionary, displayFont, localizeNumber } from "@/lib/i18n"
 import { useLang } from "@/lib/lang-context"
-import { bookingReference, cityLabel, formatTime, getTripById, pricing } from "@/lib/booking-data"
+import { cityLabel, formatTime, pricing } from "@/lib/booking-data"
+import type { TripDetail } from "@/lib/supabase/queries"
 import { SiteHeader } from "./site-header"
 
 type PassengerForm = {
@@ -17,31 +18,38 @@ type PassengerForm = {
 
 type PayMethod = "card" | "mobile" | "office"
 
-export function CheckoutForm({ tripId }: { tripId: string }) {
-  const params = useSearchParams()
+// دکمه‌های UI سه‌گانه (کارت/موبایلی/دفتر) روی enum دوتاییِ واقعی دیتابیس
+// (`online`/`offline`) نگاشت می‌شوند — کارت و موبایلی هر دو زیرمجموعهٔ
+// درگاه HesabPay‌اند (بخش ۲ سند مادر: «کارت بانکی یا پول موبایلی»).
+function toDbPaymentMethod(m: PayMethod): "online" | "offline" {
+  return m === "office" ? "offline" : "online"
+}
+
+export function CheckoutForm({ trip, seatIds }: { trip: TripDetail; seatIds: string[] }) {
   const router = useRouter()
   const { lang } = useLang()
   const t = dictionary[lang]
   const BackIcon = lang === "fa" ? ChevronRight : ChevronLeft
 
-  const trip = getTripById(tripId)
-  const date = params.get("date") || ""
-  const seats = useMemo(() => {
-    const raw = params.get("seats") || ""
-    return raw.split(",").filter(Boolean)
-  }, [params])
+  const seatLabels = useMemo(
+    () => seatIds.map((id) => trip.seats.find((s) => s.id === id)?.seatNumber ?? "?"),
+    [seatIds, trip.seats],
+  )
 
   const [passengers, setPassengers] = useState<PassengerForm[]>(() =>
-    seats.map(() => ({ fullName: "", nationalId: "", gender: "male" })),
+    seatIds.map(() => ({ fullName: "", nationalId: "", gender: "male" })),
   )
   const [phone, setPhone] = useState("")
   const [email, setEmail] = useState("")
+  const [couponCode, setCouponCode] = useState("")
   const [extraLuggage, setExtraLuggage] = useState(false)
   const [payMethod, setPayMethod] = useState<PayMethod>("card")
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [errors, setErrors] = useState<Record<string, boolean>>({})
+  const [serverError, setServerError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
 
-  if (!trip || seats.length === 0) {
+  if (seatIds.length === 0) {
     return (
       <div className="min-h-screen bg-background">
         <SiteHeader />
@@ -55,31 +63,68 @@ export function CheckoutForm({ tripId }: { tripId: string }) {
     )
   }
 
-  const { subtotal, serviceFee, grandTotal } = pricing(trip.price, seats.length)
+  const { subtotal, serviceFee, grandTotal } = pricing(trip.price, seatIds.length)
 
   function updatePassenger(i: number, patch: Partial<PassengerForm>) {
     setPassengers((prev) => prev.map((p, idx) => (idx === i ? { ...p, ...patch } : p)))
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setServerError(null)
     const nextErrors: Record<string, boolean> = {}
     passengers.forEach((p, i) => {
       if (!p.fullName.trim()) nextErrors[`name-${i}`] = true
-      if (!p.nationalId.trim()) nextErrors[`id-${i}`] = true
     })
     if (!phone.trim()) nextErrors.phone = true
     if (!acceptTerms) nextErrors.terms = true
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0) return
 
-    const ref = bookingReference(tripId, seats)
-    const q = new URLSearchParams()
-    q.set("seats", seats.join(","))
-    q.set("ref", ref)
-    q.set("name", passengers[0].fullName.trim())
-    if (date) q.set("date", date)
-    router.push(`/trips/${tripId}/confirmation?${q.toString()}`)
+    setSubmitting(true)
+    try {
+      const res = await fetch("/api/bookings/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tripId: trip.id,
+          seatIds,
+          // نام تماس رزرو = نام مسافر اول (همان قراردادی که قبلاً هم برای
+          // نمایش در صفحهٔ تأییدیه استفاده می‌شد)؛ فیلد جدا برای «نام
+          // تماس» در فرم فعلی UI وجود ندارد.
+          contactName: passengers[0].fullName.trim(),
+          contactPhone: phone.trim(),
+          passengers: passengers.map((p, i) => ({
+            seatId: seatIds[i],
+            fullName: p.fullName.trim(),
+            nationalId: p.nationalId.trim() || undefined,
+            gender: p.gender,
+          })),
+          paymentMethod: toDbPaymentMethod(payMethod),
+          couponCode: couponCode.trim() || undefined,
+        }),
+      })
+
+      const body = await res.json().catch(() => ({}))
+
+      if (!res.ok) {
+        if (body.error === "COUPON_INVALID") {
+          setErrors((prev) => ({ ...prev, coupon: true }))
+          setServerError(t.checkout.couponInvalid)
+        } else if (body.error === "SEATS_NOT_HELD") {
+          setServerError(t.checkout.holdExpired)
+        } else {
+          setServerError(t.checkout.genericError)
+        }
+        return
+      }
+
+      router.push(`/trips/${trip.id}/confirmation?ref=${encodeURIComponent(body.booking.booking_reference)}`)
+    } catch {
+      setServerError(t.checkout.genericError)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const fieldBase =
@@ -91,7 +136,17 @@ export function CheckoutForm({ tripId }: { tripId: string }) {
 
       <div className="mx-auto max-w-5xl px-5 py-8 sm:px-8">
         <Link
-          href={`/trips/${tripId}/seats${date ? `?date=${date}` : ""}`}
+          href={`/trips/${trip.id}/seats`}
+          onClick={() => {
+            // آزادسازی best-effort صندلی‌های held شده در صورت انصراف —
+            // ناوبری را بلاک نمی‌کند (fire-and-forget).
+            fetch("/api/bookings/release", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ tripId: trip.id, seatIds }),
+              keepalive: true,
+            }).catch(() => {})
+          }}
           className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
           <BackIcon className="size-4" />
@@ -109,7 +164,7 @@ export function CheckoutForm({ tripId }: { tripId: string }) {
                 {passengers.map((p, i) => (
                   <div key={i} className={i > 0 ? "border-t border-border/60 pt-5" : ""}>
                     <p className="mb-3 text-xs font-medium text-muted-foreground">
-                      {t.checkout.passengerNo} {localizeNumber(i + 1, lang)} · {seats[i]}
+                      {t.checkout.passengerNo} {localizeNumber(i + 1, lang)} · {seatLabels[i]}
                     </p>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div>
@@ -122,9 +177,7 @@ export function CheckoutForm({ tripId }: { tripId: string }) {
                           placeholder={t.checkout.fullNamePh}
                           className={`${fieldBase} ${errors[`name-${i}`] ? "border-destructive" : ""}`}
                         />
-                        {errors[`name-${i}`] && (
-                          <p className="mt-1 text-xs text-destructive">{t.checkout.required}</p>
-                        )}
+                        {errors[`name-${i}`] && <p className="mt-1 text-xs text-destructive">{t.checkout.required}</p>}
                       </div>
                       <div>
                         <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
@@ -134,11 +187,8 @@ export function CheckoutForm({ tripId }: { tripId: string }) {
                           value={p.nationalId}
                           onChange={(e) => updatePassenger(i, { nationalId: e.target.value })}
                           placeholder={t.checkout.nationalIdPh}
-                          className={`${fieldBase} ${errors[`id-${i}`] ? "border-destructive" : ""}`}
+                          className={fieldBase}
                         />
-                        {errors[`id-${i}`] && (
-                          <p className="mt-1 text-xs text-destructive">{t.checkout.required}</p>
-                        )}
                       </div>
                     </div>
                     <div className="mt-3 flex items-center gap-5">
@@ -190,6 +240,22 @@ export function CheckoutForm({ tripId }: { tripId: string }) {
               </div>
             </div>
 
+            {/* Coupon code */}
+            <div className="rounded-2xl border border-border bg-card p-5">
+              <h2 className="mb-3 text-sm font-semibold text-foreground">{t.checkout.couponTitle}</h2>
+              <input
+                dir="ltr"
+                value={couponCode}
+                onChange={(e) => {
+                  setCouponCode(e.target.value)
+                  setErrors((prev) => ({ ...prev, coupon: false }))
+                }}
+                placeholder={t.checkout.couponPh}
+                className={`${fieldBase} text-start uppercase ${errors.coupon ? "border-destructive" : ""}`}
+              />
+              {errors.coupon && <p className="mt-1 text-xs text-destructive">{t.checkout.couponInvalid}</p>}
+            </div>
+
             {/* Extra luggage (optional) */}
             <div className="rounded-2xl border border-border bg-card p-5">
               <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
@@ -239,6 +305,11 @@ export function CheckoutForm({ tripId }: { tripId: string }) {
                   </button>
                 ))}
               </div>
+              {(payMethod === "card" || payMethod === "mobile") && (
+                <p className="mt-3 rounded-lg bg-secondary/40 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
+                  {t.checkout.onlinePendingNote}
+                </p>
+              )}
             </div>
 
             {/* Terms acceptance */}
@@ -283,18 +354,19 @@ export function CheckoutForm({ tripId }: { tripId: string }) {
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">{t.checkout.date}</dt>
                 <dd className="font-medium text-foreground">
-                  {date
-                    ? new Date(date + "T00:00:00").toLocaleDateString(lang === "fa" ? "fa-AF-u-nu-arabext" : "en-US", {
-                        month: "long",
-                        day: "numeric",
-                      })
-                    : "—"}{" "}
-                  · <span dir="ltr">{formatTime(trip.departMinutes, lang)}</span>
+                  {new Date(trip.serviceDate + "T00:00:00").toLocaleDateString(lang === "fa" ? "fa-AF-u-nu-arabext" : "en-US", {
+                    month: "long",
+                    day: "numeric",
+                  })}{" "}
+                  ·{" "}
+                  <span dir="ltr">
+                    {trip.departMinutes !== null ? formatTime(trip.departMinutes, lang) : t.search.flexibleDeparture}
+                  </span>
                 </dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">{t.checkout.seatsLabel}</dt>
-                <dd className={`${displayFont(lang)} font-medium text-foreground`}>{seats.join("، ")}</dd>
+                <dd className={`${displayFont(lang)} font-medium text-foreground`}>{seatLabels.join("، ")}</dd>
               </div>
               {extraLuggage && (
                 <div className="flex justify-between">
@@ -317,6 +389,7 @@ export function CheckoutForm({ tripId }: { tripId: string }) {
                   {localizeNumber(serviceFee, lang)} {t.routes.currency}
                 </dd>
               </div>
+              <p className="text-xs text-muted-foreground">{t.checkout.couponAppliedAtConfirm}</p>
               <div className="flex justify-between text-base">
                 <dt className="font-semibold text-foreground">{t.checkout.grandTotal}</dt>
                 <dd className={`${displayFont(lang)} font-semibold text-foreground`}>
@@ -325,11 +398,14 @@ export function CheckoutForm({ tripId }: { tripId: string }) {
               </div>
             </dl>
 
+            {serverError && <p className="mt-3 text-xs text-destructive">{serverError}</p>}
+
             <button
               type="submit"
-              className="mt-5 w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              disabled={submitting}
+              className="mt-5 w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-40"
             >
-              {t.checkout.pay}
+              {submitting ? t.checkout.submitting : t.checkout.pay}
             </button>
           </aside>
         </form>

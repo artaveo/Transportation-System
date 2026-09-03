@@ -113,7 +113,7 @@ export async function searchTrips(params: {
       `id, service_date, departure_time, schedule_type, price_per_seat,
        total_seats_snapshot, status,
        bus:buses(bus_type, amenities),
-       trip_seats(status)`,
+       trip_seats(status, held_until)`,
     )
     .eq("route_id", route.id)
     .in("status", ["scheduled", "boarding"])
@@ -130,12 +130,18 @@ export async function searchTrips(params: {
   }
 
   return (tripRows ?? []).map((row): SearchTrip => {
-    const seatRows = (row.trip_seats ?? []) as { status: string }[]
+    const seatRows = (row.trip_seats ?? []) as { status: string; held_until: string | null }[]
     // اگر نقشهٔ صندلی هنوز برای این سفر تولید نشده (trip_seats خالی)، فرض
     // می‌شود همهٔ ظرفیت خالی است؛ نه صفر — تا سفرهای تازه‌ساخته‌شدهٔ ادمین
-    // که هنوز trip_seats ندارند به‌اشتباه «تکمیل» نشان داده نشوند.
+    // که هنوز trip_seats ندارند به‌اشتباه «تکمیل» نشان داده نشوند. صندلیِ
+    // held ای که held_until آن گذشته هم عملاً خالی حساب می‌شود (فاز ۴.۲).
+    const now = Date.now()
     const seatsLeft =
-      seatRows.length > 0 ? seatRows.filter((s) => s.status === "available").length : row.total_seats_snapshot
+      seatRows.length > 0
+        ? seatRows.filter(
+            (s) => s.status === "available" || (s.status === "held" && s.held_until !== null && new Date(s.held_until).getTime() < now),
+          ).length
+        : row.total_seats_snapshot
 
     const bus = Array.isArray(row.bus) ? row.bus[0] : row.bus
     const rawAmenities: string[] = bus?.amenities ?? []
@@ -158,4 +164,188 @@ export async function searchTrips(params: {
       amenities,
     }
   })
+}
+
+export type SeatInfo = {
+  id: string
+  seatNumber: string
+  row: number
+  col: string
+  status: "available" | "held" | "booked"
+}
+
+export type TripDetail = {
+  id: string
+  fromEn: string
+  toEn: string
+  serviceDate: string
+  departMinutes: number | null
+  scheduleType: "fixed_time" | "fill_and_go"
+  durationMinutes: number
+  price: number
+  busType: BusType
+  totalSeats: number
+  seats: SeatInfo[]
+}
+
+/**
+ * جزئیات کامل یک سفر + نقشهٔ واقعی صندلی، برای صفحات انتخاب صندلی/پرداخت
+ * (فاز ۴.۲). صندلیِ held ای که held_until آن گذشته، برای نمایش «available»
+ * حساب می‌شود (قفل واقعاً منقضی‌شده)؛ اما تصمیم نهایی و اتمیک همیشه در
+ * hold_seats/confirm_booking (سمت سرور) گرفته می‌شود، نه اینجا.
+ */
+export async function getTripWithSeats(tripId: string): Promise<TripDetail | null> {
+  const supabase = await createClient()
+
+  const { data: row, error } = await supabase
+    .from("trips")
+    .select(
+      `id, service_date, departure_time, schedule_type, price_per_seat, total_seats_snapshot,
+       route:routes!inner(typical_duration_minutes,
+         origin:cities!routes_origin_city_id_fkey(name_en),
+         destination:cities!routes_destination_city_id_fkey(name_en)),
+       bus:buses(bus_type),
+       trip_seats(id, seat_number, row_number, col_label, status, held_until)`,
+    )
+    .eq("id", tripId)
+    .maybeSingle()
+
+  if (error) {
+    console.error("[getTripWithSeats] Supabase error:", error.message)
+    return null
+  }
+  if (!row) return null
+
+  const route = Array.isArray(row.route) ? row.route[0] : row.route
+  const origin = Array.isArray(route?.origin) ? route.origin[0] : route?.origin
+  const destination = Array.isArray(route?.destination) ? route.destination[0] : route?.destination
+  const bus = Array.isArray(row.bus) ? row.bus[0] : row.bus
+  if (!route || !origin || !destination) return null
+
+  const now = Date.now()
+  const seats: SeatInfo[] = ((row.trip_seats ?? []) as any[])
+    .map((s) => {
+      const expired = s.status === "held" && s.held_until && new Date(s.held_until).getTime() < now
+      return {
+        id: s.id,
+        seatNumber: s.seat_number,
+        row: s.row_number,
+        col: s.col_label,
+        status: (expired ? "available" : s.status) as SeatInfo["status"],
+      }
+    })
+    .sort((a, b) => a.row - b.row || a.col.localeCompare(b.col))
+
+  return {
+    id: row.id,
+    fromEn: origin.name_en,
+    toEn: destination.name_en,
+    serviceDate: row.service_date,
+    departMinutes: timeStringToMinutes(row.departure_time),
+    scheduleType: row.schedule_type,
+    durationMinutes: route.typical_duration_minutes,
+    price: Number(row.price_per_seat),
+    busType: (bus?.bus_type as BusType) ?? "standard",
+    totalSeats: row.total_seats_snapshot,
+    seats,
+  }
+}
+
+export type BookingPassengerDetail = {
+  seatNumber: string
+  fullName: string
+  nationalId: string | null
+  gender: "male" | "female" | null
+}
+
+export type BookingDetail = {
+  bookingReference: string
+  status: string
+  contactName: string
+  contactPhone: string
+  seatsCount: number
+  subtotalAmount: number
+  serviceFeeAmount: number
+  couponDiscountAmount: number
+  tierDiscountAmount: number
+  totalAmount: number
+  paymentMethod: "online" | "offline"
+  trip: {
+    id: string
+    fromEn: string
+    toEn: string
+    serviceDate: string
+    departMinutes: number | null
+  }
+  passengers: BookingPassengerDetail[]
+}
+
+/**
+ * جزئیات کامل یک رزرو با کد رهگیری — از طریق service_role، چون طبق فاز ۳.۲
+ * (`bookings_owner_select`) خواندن رزروِ مهمان (customer_id = null) برای
+ * anon اصلاً مجاز نیست. فقط از Server Component صدا زده شود (هرگز از
+ * Client Component)، دقیقاً طبق هشدار امنیتی lib/supabase/service.ts.
+ */
+export async function getBookingByReference(reference: string): Promise<BookingDetail | null> {
+  const { createServiceClient } = await import("./service")
+  const supabase = createServiceClient()
+
+  const { data: row, error } = await supabase
+    .from("bookings")
+    .select(
+      `booking_reference, status, contact_name, contact_phone, seats_count,
+       subtotal_amount, service_fee_amount, coupon_discount_amount, tier_discount_amount,
+       total_amount, payment_method,
+       trip:trips!inner(id, service_date, departure_time,
+         route:routes!inner(
+           origin:cities!routes_origin_city_id_fkey(name_en),
+           destination:cities!routes_destination_city_id_fkey(name_en))),
+       booking_passengers(passenger_full_name, national_id, gender, trip_seats(seat_number))`,
+    )
+    .eq("booking_reference", reference)
+    .maybeSingle()
+
+  if (error) {
+    console.error("[getBookingByReference] Supabase error:", error.message)
+    return null
+  }
+  if (!row) return null
+
+  const trip = Array.isArray(row.trip) ? row.trip[0] : row.trip
+  const route = Array.isArray(trip?.route) ? trip.route[0] : trip?.route
+  const origin = Array.isArray(route?.origin) ? route.origin[0] : route?.origin
+  const destination = Array.isArray(route?.destination) ? route.destination[0] : route?.destination
+  if (!trip || !route || !origin || !destination) return null
+
+  const passengers: BookingPassengerDetail[] = ((row.booking_passengers ?? []) as any[]).map((p) => {
+    const seat = Array.isArray(p.trip_seats) ? p.trip_seats[0] : p.trip_seats
+    return {
+      seatNumber: seat?.seat_number ?? "—",
+      fullName: p.passenger_full_name,
+      nationalId: p.national_id,
+      gender: p.gender,
+    }
+  })
+
+  return {
+    bookingReference: row.booking_reference,
+    status: row.status,
+    contactName: row.contact_name,
+    contactPhone: row.contact_phone,
+    seatsCount: row.seats_count,
+    subtotalAmount: Number(row.subtotal_amount),
+    serviceFeeAmount: Number(row.service_fee_amount),
+    couponDiscountAmount: Number(row.coupon_discount_amount),
+    tierDiscountAmount: Number(row.tier_discount_amount),
+    totalAmount: Number(row.total_amount),
+    paymentMethod: row.payment_method,
+    trip: {
+      id: trip.id,
+      fromEn: origin.name_en,
+      toEn: destination.name_en,
+      serviceDate: trip.service_date,
+      departMinutes: timeStringToMinutes(trip.departure_time),
+    },
+    passengers,
+  }
 }

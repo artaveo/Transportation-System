@@ -1,16 +1,18 @@
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
+import type { Database } from "./database.types"
 
 /**
  * کلاینت Supabase مخصوص سرور (Server Component / Route Handler / Server Action).
  * نشست کاربر را از روی کوکی‌های درخواست می‌خواند. برای عملیات نوشتن حساس
  * (رزرو، قفل صندلی، تأیید پرداخت) باید در فاز ۴ یک کلاینت جدای دیگر با
  * service_role ساخته شود — این کلاینت هنوز فقط سطح دسترسی anon را دارد.
+ * از فاز ۴.۲ به بعد با Database typed است.
  */
 export async function createClient() {
   const cookieStore = await cookies()
 
-  return createServerClient(
+  return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
