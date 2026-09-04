@@ -28,7 +28,7 @@ export function DestinationsGrid({ lang }: { lang: Lang }) {
 
   return (
     <section className="border-y border-border/60 bg-secondary/40 py-16 sm:py-24">
-      <div className="mx-auto max-w-6xl px-5 sm:px-8">
+      <div className="mx-auto max-w-6xl px-5 sm:px-8 3xl:max-w-7xl 4xl:max-w-[110rem]">
         <div className="mb-12 max-w-xl">
           <p className="mb-3 flex items-center gap-2 text-sm font-medium text-primary">
             <span className="h-px w-8 bg-primary" aria-hidden="true" />

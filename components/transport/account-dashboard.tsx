@@ -25,7 +25,7 @@ export function AccountDashboard({
     <div className="min-h-screen bg-background">
       <SiteHeader />
 
-      <div className="mx-auto max-w-5xl px-5 py-10 sm:px-8">
+      <div className="mx-auto max-w-5xl px-5 py-10 sm:px-8 3xl:max-w-6xl 4xl:max-w-7xl">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className={`${displayFont(lang)} text-2xl font-semibold tracking-tight text-foreground sm:text-3xl`}>

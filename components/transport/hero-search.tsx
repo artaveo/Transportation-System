@@ -7,6 +7,7 @@ import type { Lang } from "@/lib/i18n"
 import { dictionary, displayFont } from "@/lib/i18n"
 import type { CityOption } from "@/lib/supabase/queries"
 import { DatePicker } from "./date-picker"
+import { ResponsivePhoto } from "../ui/responsive-photo"
 
 export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] }) {
   const t = dictionary[lang]
@@ -34,19 +35,22 @@ export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] 
 
   return (
     <section className="relative isolate">
-      {/* Dusk sky atmospheric anchor */}
+      {/* Dusk sky atmospheric anchor. Mobile + desktop crops in for now
+          (phase 4.6); tablet/wide will slot into the same component with
+          no code change once those crops exist — see ResponsivePhoto. */}
       <div className="absolute inset-0 -z-10">
-        <img
-          src="/images/hero-road-dusk.png"
+        <ResponsivePhoto
           alt=""
           aria-hidden="true"
           className="size-full object-cover"
+          mobile="/images/hero-road-dusk-mobile.png"
+          desktop="/images/hero-road-dusk.png"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/60 to-background" />
         <div className="absolute inset-0 bg-gradient-to-r from-background/80 to-transparent rtl:bg-gradient-to-l" />
       </div>
 
-      <div className="mx-auto max-w-6xl px-5 pb-14 pt-16 sm:px-8 sm:pb-20 sm:pt-24">
+      <div className="mx-auto max-w-6xl px-5 pb-14 pt-16 sm:px-8 sm:pb-20 sm:pt-24 3xl:max-w-7xl 4xl:max-w-[110rem]">
         <div className="max-w-2xl animate-rise-in">
           <p className="mb-4 flex items-center gap-2 text-sm font-medium text-primary">
             <span className="h-px w-8 bg-primary" aria-hidden="true" />
@@ -71,7 +75,12 @@ export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] 
             {t.hero.helper}
           </p>
 
-          <div className="grid gap-3 lg:grid-cols-[1fr_auto_1fr_1fr_auto] lg:items-end">
+          {/* Tablet-portrait and up: origin/destination pair with the date
+              picker on its own row, so 768-1023px doesn't stay pinned to a
+              single stacked column. Full 5-column inline layout only kicks
+              in from 1280px (xl) — 1024px (tablet-landscape) was too tight
+              for five inline controls including the date picker. */}
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_auto_1fr_1fr_auto] xl:items-end">
             {/* Origin */}
             <div className="relative">
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
@@ -96,7 +105,7 @@ export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] 
             <button
               type="button"
               onClick={swap}
-              className="mx-auto flex size-10 shrink-0 items-center justify-center self-center rounded-full border border-border bg-background text-primary transition-transform hover:rotate-180 hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring lg:mb-1"
+              className="flex size-10 shrink-0 items-center justify-center self-center justify-self-center rounded-full border border-border bg-background text-primary transition-transform hover:rotate-180 hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:col-span-2 xl:col-span-1 xl:mb-1"
               aria-label={t.hero.swap}
             >
               <ArrowRightLeft className="size-4" />
@@ -128,7 +137,7 @@ export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] 
             {/* Submit */}
             <button
               type="submit"
-              className="flex h-[46px] items-center justify-center gap-2 rounded-xl bg-primary px-6 font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="flex h-[46px] items-center justify-center gap-2 rounded-xl bg-primary px-6 font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:col-span-2 xl:col-span-1"
             >
               <Search className="size-4" />
               {t.hero.search}

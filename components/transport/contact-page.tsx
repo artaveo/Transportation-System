@@ -36,7 +36,7 @@ export function ContactPage() {
     <div className="min-h-screen bg-background">
       <SiteHeader />
 
-      <div className="mx-auto max-w-6xl px-5 py-14 sm:px-8 sm:py-20">
+      <div className="mx-auto max-w-6xl px-5 py-14 sm:px-8 sm:py-20 3xl:max-w-7xl 4xl:max-w-[110rem]">
         <div className="mx-auto mb-12 max-w-2xl animate-rise-in text-center">
           <p className="mb-4 flex items-center justify-center gap-2 text-sm font-medium text-primary">
             <span className="h-px w-8 bg-primary" aria-hidden="true" />
@@ -76,7 +76,7 @@ export function ContactPage() {
               <span>{t.contact.officesTitle}</span>
               <PlaceholderBadge label={t.contact.hoursNote} />
             </h2>
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-4 3xl:grid 3xl:grid-cols-2 3xl:items-start">
               {t.offices.map((o, i) => {
                 const officeLabel = lang === "fa" ? o.nameFa : o.nameEn
                 const cityLabel = lang === "fa" ? o.cityFa : o.cityEn

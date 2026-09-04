@@ -18,7 +18,7 @@ export function WhyUs({ lang }: { lang: Lang }) {
 
   return (
     <section className="route-lines py-16 sm:py-24">
-      <div className="mx-auto max-w-6xl px-5 sm:px-8">
+      <div className="mx-auto max-w-6xl px-5 sm:px-8 3xl:max-w-7xl 4xl:max-w-[110rem]">
         <div className="mx-auto mb-12 max-w-2xl text-center">
           <p className="mb-3 flex items-center justify-center gap-2 text-sm font-medium text-primary">
             <span className="h-px w-8 bg-primary" aria-hidden="true" />
@@ -31,7 +31,7 @@ export function WhyUs({ lang }: { lang: Lang }) {
           <p className="mt-3 text-pretty leading-relaxed text-muted-foreground">{t.whyUs.subtitle}</p>
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 3xl:grid-cols-6">
           {t.whyUs.items.map((item, i) => {
             const Icon = icons[i] ?? BusFront
             const accent = ACCENTS[i % ACCENTS.length]

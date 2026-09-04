@@ -26,7 +26,7 @@ export function RoutesIndex({ routes, cities }: { routes: RouteOverview[]; citie
       <SiteHeader />
 
       <div className="border-b border-border/60 bg-secondary/40">
-        <div className="mx-auto max-w-6xl px-5 py-10 sm:px-8 sm:py-14">
+        <div className="mx-auto max-w-6xl px-5 py-10 sm:px-8 sm:py-14 3xl:max-w-7xl 4xl:max-w-[110rem]">
           <p className="mb-3 flex items-center gap-2 text-sm font-medium text-primary">
             <span className="h-px w-8 bg-primary" aria-hidden="true" />
             {t.routesPage.kicker}
@@ -40,7 +40,7 @@ export function RoutesIndex({ routes, cities }: { routes: RouteOverview[]; citie
         </div>
       </div>
 
-      <div className="mx-auto max-w-6xl px-5 py-10 sm:px-8">
+      <div className="mx-auto max-w-6xl px-5 py-10 sm:px-8 3xl:max-w-7xl 4xl:max-w-[110rem]">
         <div className="mb-5">
           <PlaceholderNote>{t.routesPage.priceNote}</PlaceholderNote>
         </div>

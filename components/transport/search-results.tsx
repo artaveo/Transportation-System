@@ -128,7 +128,7 @@ export function SearchResults({
 
       {/* Route summary bar */}
       <div className="border-b border-border/60 bg-secondary/40">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-5 py-4 sm:px-8">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-5 py-4 sm:px-8 3xl:max-w-7xl 4xl:max-w-[110rem]">
           <div className="flex items-center gap-3">
             <span className={`${displayFont(lang)} text-lg font-semibold text-foreground sm:text-xl`}>
               {cityLabel(fromEn)}
@@ -148,7 +148,7 @@ export function SearchResults({
         </div>
       </div>
 
-      <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8">
+      <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8 3xl:max-w-7xl 4xl:max-w-[110rem]">
         <div className="mb-6 flex items-center justify-between gap-4">
           <div>
             <h1 className={`${displayFont(lang)} text-2xl font-semibold text-foreground`}>
@@ -279,7 +279,7 @@ export function SearchResults({
           </aside>
 
           {/* Trip list */}
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 3xl:max-w-3xl">
             {trips.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border p-10 text-center text-muted-foreground">
                 {t.search.noResults}

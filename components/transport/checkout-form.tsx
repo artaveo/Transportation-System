@@ -46,7 +46,7 @@ export function CheckoutForm({ trip, seatIds }: { trip: TripDetail; seatIds: str
   const [payMethod, setPayMethod] = useState<PayMethod>("card")
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [errors, setErrors] = useState<Record<string, boolean>>({})
-  const [serverError, setServerError] = useState<string | null>(null)
+  const [serverError, setServerError] = useState<"couponInvalid" | "holdExpired" | "genericError" | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   if (seatIds.length === 0) {
@@ -110,18 +110,18 @@ export function CheckoutForm({ trip, seatIds }: { trip: TripDetail; seatIds: str
       if (!res.ok) {
         if (body.error === "COUPON_INVALID") {
           setErrors((prev) => ({ ...prev, coupon: true }))
-          setServerError(t.checkout.couponInvalid)
+          setServerError("couponInvalid")
         } else if (body.error === "SEATS_NOT_HELD") {
-          setServerError(t.checkout.holdExpired)
+          setServerError("holdExpired")
         } else {
-          setServerError(t.checkout.genericError)
+          setServerError("genericError")
         }
         return
       }
 
       router.push(`/trips/${trip.id}/confirmation?ref=${encodeURIComponent(body.booking.booking_reference)}`)
     } catch {
-      setServerError(t.checkout.genericError)
+      setServerError("genericError")
     } finally {
       setSubmitting(false)
     }
@@ -134,7 +134,7 @@ export function CheckoutForm({ trip, seatIds }: { trip: TripDetail; seatIds: str
     <div className="min-h-screen bg-background">
       <SiteHeader />
 
-      <div className="mx-auto max-w-5xl px-5 py-8 sm:px-8">
+      <div className="mx-auto max-w-5xl px-5 py-8 sm:px-8 3xl:max-w-6xl 4xl:max-w-7xl">
         <Link
           href={`/trips/${trip.id}/seats`}
           onClick={() => {
@@ -398,7 +398,7 @@ export function CheckoutForm({ trip, seatIds }: { trip: TripDetail; seatIds: str
               </div>
             </dl>
 
-            {serverError && <p className="mt-3 text-xs text-destructive">{serverError}</p>}
+            {serverError && <p className="mt-3 text-xs text-destructive">{t.checkout[serverError]}</p>}
 
             <button
               type="submit"

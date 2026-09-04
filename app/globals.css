@@ -4,6 +4,15 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Phase 4.6 — extends Tailwind's default breakpoint scale (max 2xl/1536px)
+   to cover the wide-monitor and ultra-wide/TV device tiers from the master
+   prompt's responsive matrix (section 8.1, tiers 6-7). Without these, every
+   viewport above 1536px was rendered identically to a laptop screen. */
+@theme {
+  --breakpoint-3xl: 100rem; /* 1600px — large/wide monitor */
+  --breakpoint-4xl: 160rem; /* 2560px — ultra-wide monitor / smart TV */
+}
+
 @theme inline {
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);

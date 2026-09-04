@@ -20,7 +20,9 @@ export function AccountCompleteProfile() {
   const [phone, setPhone] = useState("")
   const [referralCode, setReferralCode] = useState("")
   const [errors, setErrors] = useState<{ phone?: boolean }>({})
-  const [serverError, setServerError] = useState<string | null>(null)
+  const [serverError, setServerError] = useState<
+    "errorPhoneTaken" | "errorInvalidReferral" | "errorGeneric" | null
+  >(null)
   const [submitting, setSubmitting] = useState(false)
 
   // پیش‌پرکردن از پروفایل موقت (اگر از فرم ثبت‌نام این‌جا رسیده) + خواندن
@@ -57,16 +59,16 @@ export function AccountCompleteProfile() {
 
       if (error) {
         if (error.message.includes("PHONE_ALREADY_REGISTERED")) {
-          setServerError(t.account.errorPhoneTaken)
+          setServerError("errorPhoneTaken")
         } else if (error.message.includes("INVALID_REFERRAL_CODE")) {
-          setServerError(t.account.errorInvalidReferral)
+          setServerError("errorInvalidReferral")
         } else if (error.message.includes("CUSTOMER_ALREADY_EXISTS")) {
           // نشست از قبل پروفایل داشته — فقط به داشبورد برو
           router.push("/account")
           router.refresh()
           return
         } else {
-          setServerError(t.account.errorGeneric)
+          setServerError("errorGeneric")
         }
         return
       }
@@ -75,7 +77,7 @@ export function AccountCompleteProfile() {
       router.push("/account")
       router.refresh()
     } catch {
-      setServerError(t.account.errorGeneric)
+      setServerError("errorGeneric")
     } finally {
       setSubmitting(false)
     }
@@ -134,7 +136,7 @@ export function AccountCompleteProfile() {
               />
             </div>
 
-            {serverError && <p className="text-xs text-destructive">{serverError}</p>}
+            {serverError && <p className="text-xs text-destructive">{t.account[serverError]}</p>}
 
             <button
               type="submit"

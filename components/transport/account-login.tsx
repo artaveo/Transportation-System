@@ -19,7 +19,7 @@ export function AccountLogin() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [errors, setErrors] = useState<{ email?: boolean; password?: boolean }>({})
-  const [serverError, setServerError] = useState<string | null>(null)
+  const [serverError, setServerError] = useState<"errorInvalidCredentials" | "errorGeneric" | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   async function submit(e: React.FormEvent) {
@@ -36,7 +36,7 @@ export function AccountLogin() {
       const supabase = createClient()
       const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
       if (error) {
-        setServerError(t.account.errorInvalidCredentials)
+        setServerError("errorInvalidCredentials")
         return
       }
 
@@ -75,7 +75,7 @@ export function AccountLogin() {
       router.push("/account")
       router.refresh()
     } catch {
-      setServerError(t.account.errorGeneric)
+      setServerError("errorGeneric")
     } finally {
       setSubmitting(false)
     }
@@ -123,7 +123,7 @@ export function AccountLogin() {
               {errors.password && <p className="mt-1 text-xs text-destructive">{t.account.required}</p>}
             </div>
 
-            {serverError && <p className="text-xs text-destructive">{serverError}</p>}
+            {serverError && <p className="text-xs text-destructive">{t.account[serverError]}</p>}
 
             <button
               type="submit"

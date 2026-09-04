@@ -23,7 +23,7 @@ export function SiteFooter() {
 
   return (
     <footer id="offices" className="scroll-mt-16 border-t border-border/60 bg-background">
-      <div className="mx-auto max-w-6xl px-5 py-14 sm:px-8">
+      <div className="mx-auto max-w-6xl px-5 py-14 sm:px-8 3xl:max-w-7xl 4xl:max-w-[110rem]">
         <div className="grid gap-10 md:grid-cols-4">
           {/* Brand */}
           <div className="md:col-span-1">

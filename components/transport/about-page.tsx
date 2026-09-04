@@ -8,6 +8,7 @@ import { SiteHeader } from "./site-header"
 import { SiteFooter } from "./site-footer"
 import { FleetFeatures } from "./fleet-features"
 import { PlaceholderBadge } from "./placeholder-badge"
+import { ResponsivePhoto } from "../ui/responsive-photo"
 
 export function AboutPage() {
   const { lang } = useLang()
@@ -19,14 +20,17 @@ export function AboutPage() {
 
       {/* Intro — real corridor photo (mountain highway at dusk) as the
           background, same family of treatment as the homepage hero and the
-          fleet section's photo. */}
+          fleet section's photo. Four device-tier crops (phase 4.6). */}
       <section className="relative isolate overflow-hidden">
         <div className="absolute inset-0 -z-10">
-          <img
-            src="/images/about-corridor-dusk.png"
+          <ResponsivePhoto
             alt=""
             aria-hidden="true"
             className="size-full object-cover"
+            mobile="/images/about-corridor-dusk-mobile.png"
+            tablet="/images/about-corridor-dusk-tablet.png"
+            desktop="/images/about-corridor-dusk.png"
+            wide="/images/about-corridor-dusk-wide.png"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-background/35 via-background/55 to-background/95" />
         </div>

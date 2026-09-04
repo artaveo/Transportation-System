@@ -11,7 +11,7 @@ export function PopularRoutes({ lang }: { lang: Lang }) {
 
   return (
     <section id="routes" className="route-lines scroll-mt-16 py-16 sm:py-24">
-      <div className="mx-auto max-w-6xl px-5 sm:px-8">
+      <div className="mx-auto max-w-6xl px-5 sm:px-8 3xl:max-w-7xl 4xl:max-w-[110rem]">
         <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 className={`${displayFont(lang)} text-3xl font-semibold tracking-tight text-foreground sm:text-4xl`}>

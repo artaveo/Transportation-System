@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { AlertCircle, ArrowLeftRight, CircleCheck, MapPin, Pencil, Search, XCircle } from "lucide-react"
-import { dictionary, displayFont, localizeNumber } from "@/lib/i18n"
+import { dictionary, displayFont, localizeNumber, type Lang } from "@/lib/i18n"
 import { useLang } from "@/lib/lang-context"
 import { cityLabel, formatTime } from "@/lib/booking-data"
 import type { BookingDetail } from "@/lib/supabase/queries"
@@ -16,6 +16,16 @@ type LookupState =
   | { phase: "notFound" }
   | { phase: "error" }
   | { phase: "found"; booking: BookingDetail }
+
+// cancelError می‌تواند از دو فضای نام ترجمهٔ متفاوت بیاید (t.track برای
+// وضعیت‌های کنسلی، t.checkout برای خطای عمومی شبکه) — این تابع در لحظهٔ
+// رندر (نه لحظهٔ خطا) رشتهٔ درست را طبق زبان فعلی برمی‌گرداند.
+function cancelErrorText(
+  t: (typeof dictionary)[Lang],
+  key: "alreadyCancelled" | "cancelNotAllowed" | "genericError",
+): string {
+  return key === "genericError" ? t.checkout.genericError : t.track[key]
+}
 
 export function BookingLookup() {
   const { lang } = useLang()
@@ -32,12 +42,14 @@ export function BookingLookup() {
   const [newPhone, setNewPhone] = useState("")
   const [savingContact, setSavingContact] = useState(false)
   const [contactSaved, setContactSaved] = useState(false)
-  const [contactError, setContactError] = useState<string | null>(null)
+  const [contactError, setContactError] = useState<"genericError" | null>(null)
 
   const [cancelling, setCancelling] = useState(false)
   const [cancelSubmitting, setCancelSubmitting] = useState(false)
   const [cancelSubmitted, setCancelSubmitted] = useState(false)
-  const [cancelError, setCancelError] = useState<string | null>(null)
+  const [cancelError, setCancelError] = useState<"alreadyCancelled" | "cancelNotAllowed" | "genericError" | null>(
+    null,
+  )
 
   function resetManageState() {
     setEditingContact(false)
@@ -102,7 +114,7 @@ export function BookingLookup() {
       })
 
       if (!res.ok) {
-        setContactError(t.checkout.genericError)
+        setContactError("genericError")
         return
       }
 
@@ -112,7 +124,7 @@ export function BookingLookup() {
       // را بزند، مقدار فعلی درست نمایش داده شود.
       setState({ phase: "found", booking: { ...state.booking, contactPhone: newPhone.trim() } })
     } catch {
-      setContactError(t.checkout.genericError)
+      setContactError("genericError")
     } finally {
       setSavingContact(false)
     }
@@ -130,11 +142,11 @@ export function BookingLookup() {
 
       if (res.status === 409) {
         const body = await res.json().catch(() => ({}))
-        setCancelError(body.error === "ALREADY_CANCELLED" ? t.track.alreadyCancelled : t.track.cancelNotAllowed)
+        setCancelError(body.error === "ALREADY_CANCELLED" ? "alreadyCancelled" : "cancelNotAllowed")
         return
       }
       if (!res.ok) {
-        setCancelError(t.checkout.genericError)
+        setCancelError("genericError")
         return
       }
 
@@ -144,7 +156,7 @@ export function BookingLookup() {
         setState({ phase: "found", booking: { ...state.booking, status: "cancelled" } })
       }
     } catch {
-      setCancelError(t.checkout.genericError)
+      setCancelError("genericError")
     } finally {
       setCancelSubmitting(false)
     }
@@ -303,7 +315,7 @@ export function BookingLookup() {
                         {savingContact ? t.track.saving : t.track.saveChanges}
                       </button>
                     </div>
-                    {contactError && <p className="mt-2 text-xs text-destructive">{contactError}</p>}
+                    {contactError && <p className="mt-2 text-xs text-destructive">{t.checkout[contactError]}</p>}
                   </form>
                 )}
                 {contactSaved && (
@@ -322,7 +334,7 @@ export function BookingLookup() {
                     >
                       {t.track.viewCancellationPolicy}
                     </Link>
-                    {cancelError && <p className="mb-3 text-xs text-destructive">{cancelError}</p>}
+                    {cancelError && <p className="mb-3 text-xs text-destructive">{cancelErrorText(t, cancelError)}</p>}
                     <div className="flex gap-2">
                       <button
                         type="button"

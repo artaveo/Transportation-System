@@ -22,7 +22,9 @@ export function AccountSignup() {
   const [password, setPassword] = useState("")
   const [referralCode, setReferralCode] = useState("")
   const [errors, setErrors] = useState<{ phone?: boolean; email?: boolean; password?: boolean }>({})
-  const [serverError, setServerError] = useState<string | null>(null)
+  const [serverError, setServerError] = useState<
+    "errorEmailInUse" | "errorWeakPassword" | "errorGeneric" | "errorPhoneTaken" | "errorInvalidReferral" | null
+  >(null)
   const [confirmNoticeShown, setConfirmNoticeShown] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
@@ -43,11 +45,11 @@ export function AccountSignup() {
 
       if (error) {
         if (error.message.toLowerCase().includes("already registered")) {
-          setServerError(t.account.errorEmailInUse)
+          setServerError("errorEmailInUse")
         } else if (error.message.toLowerCase().includes("password")) {
-          setServerError(t.account.errorWeakPassword)
+          setServerError("errorWeakPassword")
         } else {
-          setServerError(t.account.errorGeneric)
+          setServerError("errorGeneric")
         }
         return
       }
@@ -70,10 +72,10 @@ export function AccountSignup() {
         if (signupError) {
           setServerError(
             signupError.message.includes("PHONE_ALREADY_REGISTERED")
-              ? t.account.errorPhoneTaken
+              ? "errorPhoneTaken"
               : signupError.message.includes("INVALID_REFERRAL_CODE")
-                ? t.account.errorInvalidReferral
-                : t.account.errorGeneric,
+                ? "errorInvalidReferral"
+                : "errorGeneric",
           )
           return
         }
@@ -87,7 +89,7 @@ export function AccountSignup() {
       savePendingProfile(profile)
       setConfirmNoticeShown(true)
     } catch {
-      setServerError(t.account.errorGeneric)
+      setServerError("errorGeneric")
     } finally {
       setSubmitting(false)
     }
@@ -181,7 +183,7 @@ export function AccountSignup() {
                   />
                 </div>
 
-                {serverError && <p className="text-xs text-destructive">{serverError}</p>}
+                {serverError && <p className="text-xs text-destructive">{t.account[serverError]}</p>}
 
                 <button
                   type="submit"

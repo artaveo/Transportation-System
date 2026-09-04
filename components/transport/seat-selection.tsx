@@ -23,7 +23,7 @@ export function SeatSelection({ trip }: { trip: TripDetail }) {
 
   const [selected, setSelected] = useState<string[]>([])
   const [limitNotice, setLimitNotice] = useState(false)
-  const [holdError, setHoldError] = useState<string | null>(null)
+  const [holdError, setHoldError] = useState<"holdError" | "holdErrorGeneric" | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   const leftCols = LEFT_COLS[trip.busType]
@@ -74,18 +74,18 @@ export function SeatSelection({ trip }: { trip: TripDetail }) {
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
         if (body.error === "SEATS_UNAVAILABLE") {
-          setHoldError(t.seats.holdError)
+          setHoldError("holdError")
           router.refresh() // نقشهٔ صندلی را با وضعیت واقعی به‌روز کن
           setSelected([])
         } else {
-          setHoldError(t.seats.holdErrorGeneric)
+          setHoldError("holdErrorGeneric")
         }
         return
       }
       const q = new URLSearchParams({ seats: selected.join(",") })
       router.push(`/trips/${trip.id}/checkout?${q.toString()}`)
     } catch {
-      setHoldError(t.seats.holdErrorGeneric)
+      setHoldError("holdErrorGeneric")
     } finally {
       setSubmitting(false)
     }
@@ -98,7 +98,7 @@ export function SeatSelection({ trip }: { trip: TripDetail }) {
     <div className="min-h-screen bg-background">
       <SiteHeader />
 
-      <div className="mx-auto max-w-5xl px-5 py-8 sm:px-8">
+      <div className="mx-auto max-w-5xl px-5 py-8 sm:px-8 3xl:max-w-6xl 4xl:max-w-7xl">
         <Link href="/search" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <BackIcon className="size-4" />
           {t.common.back}
@@ -203,7 +203,7 @@ export function SeatSelection({ trip }: { trip: TripDetail }) {
             )}
 
             {limitNotice && <p className="mb-4 text-xs text-destructive">{t.seats.max}</p>}
-            {holdError && <p className="mb-4 text-xs text-destructive">{holdError}</p>}
+            {holdError && <p className="mb-4 text-xs text-destructive">{t.seats[holdError]}</p>}
 
             <div className="flex items-center justify-between border-t border-border/60 pt-4 text-sm">
               <span className="text-muted-foreground">{t.seats.pricePerSeat}</span>

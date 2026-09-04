@@ -15,7 +15,7 @@ export function TrustStats({ lang }: { lang: Lang }) {
 
   return (
     <section className="border-y border-border/60 bg-secondary/40 py-12">
-      <div className="mx-auto max-w-5xl px-5 sm:px-8">
+      <div className="mx-auto max-w-5xl px-5 sm:px-8 3xl:max-w-6xl 4xl:max-w-7xl">
         <div className="mx-auto mb-8 max-w-xl text-center">
           <h2 className={`${displayFont(lang)} text-xl font-semibold text-foreground sm:text-2xl`}>
             {t.trustStats.title}
