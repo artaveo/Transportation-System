@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { createClient } from "@/lib/supabase/server"
 import { createServiceClient } from "@/lib/supabase/service"
 import { MAX_SEATS_PER_BOOKING } from "@/lib/booking-data"
 
@@ -23,6 +24,13 @@ type ConfirmBody = {
 // ثبت نهایی رزرو. طبق تصمیم این چت: هر دو روش پرداخت (آنلاین/آفلاین) در
 // همین فاز فعال‌اند و رزرو آنلاین هم فعلاً با payments.status='pending'
 // ثبت می‌شود (بدون درگاه واقعی HesabPay — آن اتصال فاز ۶.۳ است).
+//
+// افزودهٔ فاز ۴.۵: اگر درخواست از یک مسافرِ واردشده (Supabase Auth session)
+// بیاید، customer_id واقعی‌اش خودکار به confirm_booking پاس داده می‌شود —
+// بدون هیچ تغییری در فرم پرداخت (checkout-form.tsx دست‌نخورده ماند). این
+// یعنی تخفیف سطح باشگاه مشتریان و اتصال رزرو به تاریخچهٔ حساب کاربری از
+// همین حالا برای مسافران واردشده کار می‌کند؛ مهمان‌ها دقیقاً مثل قبل عمل
+// می‌کنند (customer_id همچنان null).
 export async function POST(request: Request) {
   let body: ConfirmBody
   try {
@@ -52,6 +60,28 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "INVALID_PAYMENT_METHOD" }, { status: 400 })
   }
 
+  // کلاینت anon (نه service_role) فقط برای خواندنِ session/هویت خودِ درخواست‌دهنده
+  // — دقیقاً همان چیزی که customers_self_select در فاز ۳.۲ برایش طراحی شده.
+  let customerId: string | null = null
+  try {
+    const authClient = await createClient()
+    const {
+      data: { user },
+    } = await authClient.auth.getUser()
+    if (user) {
+      const { data: customer } = await authClient
+        .from("customers")
+        .select("id")
+        .eq("auth_user_id", user.id)
+        .maybeSingle()
+      customerId = customer?.id ?? null
+    }
+  } catch (err) {
+    // نبودِ session یا نبودِ پروفایل customers، خطای مسدودکننده نیست —
+    // رزرو به‌صورت مهمان ادامه پیدا می‌کند.
+    console.error("[api/bookings/confirm] customer lookup failed:", err)
+  }
+
   const supabase = createServiceClient()
   const { data, error } = await supabase.rpc("confirm_booking", {
     p_trip_id: tripId,
@@ -67,6 +97,7 @@ export async function POST(request: Request) {
     })),
     p_payment_method: paymentMethod,
     p_coupon_code: couponCode?.trim() || null,
+    p_customer_id: customerId,
   })
 
   if (error) {

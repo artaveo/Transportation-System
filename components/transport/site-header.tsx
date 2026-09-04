@@ -72,7 +72,7 @@ export function SiteHeader() {
             {t.langButton}
           </button>
           <Link
-            href="/admin"
+            href="/account"
             className="hidden rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:inline-flex"
           >
             {t.login}
@@ -110,7 +110,7 @@ export function SiteHeader() {
             })}
             <li>
               <Link
-                href="/admin"
+                href="/account"
                 onClick={() => setOpen(false)}
                 className="mt-1 block rounded-lg bg-primary px-3 py-2.5 text-center text-sm font-semibold text-primary-foreground"
               >

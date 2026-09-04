@@ -784,6 +784,7 @@ export type Database = {
           p_contact_name: string
           p_contact_phone: string
           p_coupon_code?: string
+          p_customer_id?: string
           p_passengers: Json
           p_payment_method: Database["public"]["Enums"]["payment_method"]
           p_seat_ids: string[]
@@ -795,6 +796,7 @@ export type Database = {
           coupon_discount_amount: number
           service_fee_amount: number
           subtotal_amount: number
+          tier_discount_amount: number
           total_amount: number
         }[]
       }
@@ -821,6 +823,37 @@ export type Database = {
       is_super_admin: { Args: never; Returns: boolean }
       release_seats: {
         Args: { p_seat_ids: string[]; p_trip_id: string }
+        Returns: undefined
+      }
+      request_booking_cancellation: {
+        Args: { p_phone: string; p_reference: string }
+        Returns: undefined
+      }
+      signup_customer: {
+        Args: {
+          p_email?: string
+          p_full_name?: string
+          p_phone: string
+          p_referral_code?: string
+        }
+        Returns: {
+          auth_user_id: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          is_registered: boolean
+          lifetime_completed_trips: number
+          loyalty_tier_id: string
+          phone: string
+          referral_code: string | null
+          referred_by_customer_id: string | null
+          updated_at: string
+          wallet_balance: number
+        }
+      }
+      update_booking_contact_phone: {
+        Args: { p_new_phone: string; p_phone: string; p_reference: string }
         Returns: undefined
       }
     }

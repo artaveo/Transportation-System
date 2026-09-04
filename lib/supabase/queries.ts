@@ -512,3 +512,199 @@ export async function getRoutesOverview(): Promise<RouteOverview[]> {
     .filter((r) => r.fromEn && r.toEn)
     .sort((a, b) => a.durationMinutes - b.durationMinutes)
 }
+
+// ============================================================================
+// فاز ۴.۵ — حساب کاربری مسافر و باشگاه مشتریان
+// این توابع (برخلاف بخش‌های بالا) از کلاینت anon معمولی (session-aware)
+// استفاده می‌کنند، نه service_role — چون RLS فاز ۳.۲ از قبل دقیقاً برای
+// همین حالت طراحی شده بود (customers_self_select, bookings_owner_select,
+// wallet_tx_owner_select, referrals_owner_select: همه با auth.uid()/
+// current_customer_id() کار می‌کنند). نیازی به دور زدن RLS نیست.
+// ============================================================================
+
+export type LoyaltyTierInfo = {
+  tierKey: string
+  nameFa: string
+  nameEn: string
+  discountPercent: number
+  minCompletedTrips: number
+}
+
+export type WalletTransactionInfo = {
+  id: string
+  type: string
+  amount: number
+  note: string | null
+  createdAt: string
+}
+
+export type CustomerAccount = {
+  id: string
+  phone: string
+  fullName: string | null
+  email: string | null
+  walletBalance: number
+  lifetimeCompletedTrips: number
+  referralCode: string
+  tier: LoyaltyTierInfo
+  /** null یعنی مشتری از قبل در بالاترین سطح فعال است */
+  nextTier: LoyaltyTierInfo | null
+  walletTransactions: WalletTransactionInfo[]
+  /** تعداد رفرال‌های تکمیل‌شده (پاداش‌دهی‌شده)، نه کل کدهای صادرشده */
+  completedReferralCount: number
+}
+
+/**
+ * پروفایل کامل مسافرِ واردشده، یا `null` اگر اصلاً وارد نشده باشد یا هنوز
+ * رکورد `customers` نداشته باشد (یعنی باید به /account/complete-profile
+ * برود — تشخیص این تفاوت با getAuthUser() در کنار این تابع انجام می‌شود).
+ */
+export async function getCustomerAccount(): Promise<CustomerAccount | null> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const { data: row, error } = await supabase
+    .from("customers")
+    .select(
+      `id, phone, full_name, email, wallet_balance, lifetime_completed_trips, referral_code,
+       tier:loyalty_tiers!customers_loyalty_tier_id_fkey(tier_key, name_fa, name_en, discount_percent, min_completed_trips)`,
+    )
+    .eq("auth_user_id", user.id)
+    .maybeSingle()
+
+  if (error) {
+    console.error("[getCustomerAccount] Supabase error:", error.message)
+    return null
+  }
+  if (!row) return null
+
+  const tier = Array.isArray(row.tier) ? row.tier[0] : row.tier
+  if (!tier) return null
+
+  const { data: allTiers } = await supabase
+    .from("loyalty_tiers")
+    .select("tier_key, name_fa, name_en, discount_percent, min_completed_trips")
+    .eq("is_active", true)
+    .order("min_completed_trips", { ascending: true })
+
+  const nextTierRow = (allTiers ?? []).find((t) => t.min_completed_trips > row.lifetime_completed_trips) ?? null
+
+  const { data: txRows } = await supabase
+    .from("wallet_transactions")
+    .select("id, type, amount, note, created_at")
+    .eq("customer_id", row.id)
+    .order("created_at", { ascending: false })
+    .limit(20)
+
+  const { count: completedReferralCount } = await supabase
+    .from("referrals")
+    .select("id", { count: "exact", head: true })
+    .eq("referrer_customer_id", row.id)
+    .eq("status", "completed")
+
+  return {
+    id: row.id,
+    phone: row.phone,
+    fullName: row.full_name,
+    email: row.email,
+    walletBalance: Number(row.wallet_balance),
+    lifetimeCompletedTrips: row.lifetime_completed_trips,
+    referralCode: row.referral_code ?? "",
+    tier: {
+      tierKey: tier.tier_key,
+      nameFa: tier.name_fa,
+      nameEn: tier.name_en,
+      discountPercent: Number(tier.discount_percent),
+      minCompletedTrips: tier.min_completed_trips,
+    },
+    nextTier: nextTierRow
+      ? {
+          tierKey: nextTierRow.tier_key,
+          nameFa: nextTierRow.name_fa,
+          nameEn: nextTierRow.name_en,
+          discountPercent: Number(nextTierRow.discount_percent),
+          minCompletedTrips: nextTierRow.min_completed_trips,
+        }
+      : null,
+    walletTransactions: (txRows ?? []).map((t) => ({
+      id: t.id,
+      type: t.type,
+      amount: Number(t.amount),
+      note: t.note,
+      createdAt: t.created_at,
+    })),
+    completedReferralCount: completedReferralCount ?? 0,
+  }
+}
+
+export type BookingHistoryItem = {
+  id: string
+  bookingReference: string
+  status: string
+  totalAmount: number
+  seatsCount: number
+  trip: {
+    id: string
+    fromEn: string
+    toEn: string
+    serviceDate: string
+    departMinutes: number | null
+  }
+}
+
+/** تاریخچهٔ رزروهای مسافرِ واردشده؛ لیست خالی اگر وارد نشده یا هنوز پروفایل نساخته. */
+export async function getCustomerBookingHistory(): Promise<BookingHistoryItem[]> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return []
+
+  const { data: customer } = await supabase
+    .from("customers")
+    .select("id")
+    .eq("auth_user_id", user.id)
+    .maybeSingle()
+  if (!customer) return []
+
+  const { data: rows, error } = await supabase
+    .from("bookings")
+    .select(
+      `id, booking_reference, status, total_amount, seats_count, created_at,
+       trip:trips!inner(id, service_date, departure_time,
+         route:routes!inner(
+           origin:cities!routes_origin_city_id_fkey(name_en),
+           destination:cities!routes_destination_city_id_fkey(name_en)))`,
+    )
+    .eq("customer_id", customer.id)
+    .order("created_at", { ascending: false })
+
+  if (error) {
+    console.error("[getCustomerBookingHistory] Supabase error:", error.message)
+    return []
+  }
+
+  return (rows ?? []).map((row): BookingHistoryItem => {
+    const trip = Array.isArray(row.trip) ? row.trip[0] : row.trip
+    const route = Array.isArray(trip?.route) ? trip.route[0] : trip?.route
+    const origin = Array.isArray(route?.origin) ? route.origin[0] : route?.origin
+    const destination = Array.isArray(route?.destination) ? route.destination[0] : route?.destination
+    return {
+      id: row.id,
+      bookingReference: row.booking_reference,
+      status: row.status,
+      totalAmount: Number(row.total_amount),
+      seatsCount: row.seats_count,
+      trip: {
+        id: trip?.id ?? "",
+        fromEn: origin?.name_en ?? "",
+        toEn: destination?.name_en ?? "",
+        serviceDate: trip?.service_date ?? "",
+        departMinutes: trip?.departure_time ? timeStringToMinutes(trip.departure_time) : null,
+      },
+    }
+  })
+}
