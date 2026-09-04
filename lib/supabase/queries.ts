@@ -349,3 +349,81 @@ export async function getBookingByReference(reference: string): Promise<BookingD
     passengers,
   }
 }
+
+/**
+ * جزئیات کامل یک رزرو، فقط اگر کد رهگیری + شمارهٔ تماس هر دو مطابقت
+ * داشته باشند — دقیقاً همان اثبات مالکیتی که فاز ۳.۲ برای رزروِ مهمان
+ * («customer_id = null») به‌جای auth.uid() در نظر گرفته بود. برخلاف
+ * getBookingByReference (که فقط برای صفحهٔ تأییدیهٔ بلافاصله بعد از
+ * پرداخت، فقط با ref، است)، این تابع برای صفحهٔ عمومی «پیگیری رزرو»
+ * (/track، فاز ۴.۳) است و همیشه هر دو مقدار را با هم می‌خواهد. عمداً
+ * چه کد رهگیری غلط باشد چه شمارهٔ تماس، همان `null` برگردانده می‌شود —
+ * تا حدس‌زدنِ یک کد رهگیری معتبر با آزمایش شماره‌های مختلف ممکن نباشد.
+ */
+export async function getBookingByReferenceAndPhone(
+  reference: string,
+  phone: string,
+): Promise<BookingDetail | null> {
+  const { createServiceClient } = await import("./service")
+  const supabase = createServiceClient()
+
+  const { data: row, error } = await supabase
+    .from("bookings")
+    .select(
+      `booking_reference, status, contact_name, contact_phone, seats_count,
+       subtotal_amount, service_fee_amount, coupon_discount_amount, tier_discount_amount,
+       total_amount, payment_method,
+       trip:trips!inner(id, service_date, departure_time,
+         route:routes!inner(
+           origin:cities!routes_origin_city_id_fkey(name_en),
+           destination:cities!routes_destination_city_id_fkey(name_en))),
+       booking_passengers(passenger_full_name, national_id, gender, trip_seats(seat_number))`,
+    )
+    .eq("booking_reference", reference.trim().toUpperCase())
+    .eq("contact_phone", phone.trim())
+    .maybeSingle()
+
+  if (error) {
+    console.error("[getBookingByReferenceAndPhone] Supabase error:", error.message)
+    return null
+  }
+  if (!row) return null
+
+  const trip = Array.isArray(row.trip) ? row.trip[0] : row.trip
+  const route = Array.isArray(trip?.route) ? trip.route[0] : trip?.route
+  const origin = Array.isArray(route?.origin) ? route.origin[0] : route?.origin
+  const destination = Array.isArray(route?.destination) ? route.destination[0] : route?.destination
+  if (!trip || !route || !origin || !destination) return null
+
+  const passengers: BookingPassengerDetail[] = ((row.booking_passengers ?? []) as any[]).map((p) => {
+    const seat = Array.isArray(p.trip_seats) ? p.trip_seats[0] : p.trip_seats
+    return {
+      seatNumber: seat?.seat_number ?? "—",
+      fullName: p.passenger_full_name,
+      nationalId: p.national_id,
+      gender: p.gender,
+    }
+  })
+
+  return {
+    bookingReference: row.booking_reference,
+    status: row.status,
+    contactName: row.contact_name,
+    contactPhone: row.contact_phone,
+    seatsCount: row.seats_count,
+    subtotalAmount: Number(row.subtotal_amount),
+    serviceFeeAmount: Number(row.service_fee_amount),
+    couponDiscountAmount: Number(row.coupon_discount_amount),
+    tierDiscountAmount: Number(row.tier_discount_amount),
+    totalAmount: Number(row.total_amount),
+    paymentMethod: row.payment_method,
+    trip: {
+      id: trip.id,
+      fromEn: origin.name_en,
+      toEn: destination.name_en,
+      serviceDate: trip.service_date,
+      departMinutes: timeStringToMinutes(trip.departure_time),
+    },
+    passengers,
+  }
+}

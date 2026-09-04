@@ -3,20 +3,19 @@
 import { useState } from "react"
 import Link from "next/link"
 import { AlertCircle, ArrowLeftRight, CircleCheck, MapPin, Pencil, Search, XCircle } from "lucide-react"
-import { cities, dictionary, displayFont, localizeNumber } from "@/lib/i18n"
+import { dictionary, displayFont, localizeNumber } from "@/lib/i18n"
 import { useLang } from "@/lib/lang-context"
-import { formatTime, hash, pricing } from "@/lib/booking-data"
+import { cityLabel, formatTime } from "@/lib/booking-data"
+import type { BookingDetail } from "@/lib/supabase/queries"
 import { SiteHeader } from "./site-header"
 import { SiteFooter } from "./site-footer"
 
-type LookupResult = {
-  found: boolean
-  fromEn?: string
-  toEn?: string
-  departMinutes?: number
-  seats?: string[]
-  amount?: number
-}
+type LookupState =
+  | { phase: "idle" }
+  | { phase: "loading" }
+  | { phase: "notFound" }
+  | { phase: "error" }
+  | { phase: "found"; booking: BookingDetail }
 
 export function BookingLookup() {
   const { lang } = useLang()
@@ -24,76 +23,142 @@ export function BookingLookup() {
   const [ref, setRef] = useState("")
   const [phone, setPhone] = useState("")
   const [errors, setErrors] = useState<{ ref?: boolean; phone?: boolean }>({})
-  const [result, setResult] = useState<LookupResult | null>(null)
+  const [state, setState] = useState<LookupState>({ phase: "idle" })
 
-  // UI-only affordances for the two management actions the enrichment brief
-  // calls for. There is no backend yet (Phase 1 is UI/UX only, per the
-  // master prompt) — these show the intended flow and end state; wiring
-  // them to a real update/cancellation happens once Supabase is in place.
+  // اقدامات مدیریت رزرو — هر دو حالا واقعاً به Route Handlerهای فاز ۴.۳
+  // وصل‌اند (update_booking_contact_phone / request_booking_cancellation
+  // سمت service_role)، نه دیگر UI-only مثل نسخهٔ فاز ۱.
   const [editingContact, setEditingContact] = useState(false)
   const [newPhone, setNewPhone] = useState("")
+  const [savingContact, setSavingContact] = useState(false)
   const [contactSaved, setContactSaved] = useState(false)
-  const [cancelling, setCancelling] = useState(false)
-  const [cancelSubmitted, setCancelSubmitted] = useState(false)
+  const [contactError, setContactError] = useState<string | null>(null)
 
-  function submit(e: React.FormEvent) {
+  const [cancelling, setCancelling] = useState(false)
+  const [cancelSubmitting, setCancelSubmitting] = useState(false)
+  const [cancelSubmitted, setCancelSubmitted] = useState(false)
+  const [cancelError, setCancelError] = useState<string | null>(null)
+
+  function resetManageState() {
+    setEditingContact(false)
+    setNewPhone("")
+    setSavingContact(false)
+    setContactSaved(false)
+    setContactError(null)
+    setCancelling(false)
+    setCancelSubmitting(false)
+    setCancelSubmitted(false)
+    setCancelError(null)
+  }
+
+  async function submit(e: React.FormEvent) {
     e.preventDefault()
     const nextErrors: { ref?: boolean; phone?: boolean } = {}
     if (!ref.trim()) nextErrors.ref = true
     if (!phone.trim()) nextErrors.phone = true
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0) {
-      setResult(null)
+      setState({ phase: "idle" })
       return
     }
 
-    setEditingContact(false)
-    setContactSaved(false)
-    setCancelling(false)
-    setCancelSubmitted(false)
+    resetManageState()
+    setState({ phase: "loading" })
 
-    // No backend yet (Phase 1 is UI/UX only) — deterministically derive a
-    // plausible booking from the entered values, the same way the rest of
-    // this prototype fabricates trips/seats from a hash of stable inputs.
-    const seed = hash(`${ref.trim().toUpperCase()}|${phone.trim()}`)
+    try {
+      const res = await fetch("/api/bookings/lookup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reference: ref.trim(), phone: phone.trim() }),
+      })
 
-    // Roughly one lookup in six shows the "not found" state, so both
-    // outcomes of this page are visible without needing a real backend.
-    if (seed % 6 === 0) {
-      setResult({ found: false })
-      return
+      if (res.status === 404) {
+        setState({ phase: "notFound" })
+        return
+      }
+      if (!res.ok) {
+        setState({ phase: "error" })
+        return
+      }
+
+      const body = await res.json()
+      setState({ phase: "found", booking: body.booking as BookingDetail })
+    } catch {
+      setState({ phase: "error" })
     }
-
-    const fromIdx = seed % cities.length
-    let toIdx = Math.floor(seed / 7) % cities.length
-    if (toIdx === fromIdx) toIdx = (toIdx + 1) % cities.length
-    const seatCount = 1 + (seed % 3)
-    const seats = Array.from(
-      { length: seatCount },
-      (_, i) => `${2 + ((seed + i * 5) % 12)}${["A", "B", "C", "D"][(seed + i) % 4]}`,
-    )
-    const pricePerSeat = 700 + (seed % 12) * 100
-    const { grandTotal } = pricing(pricePerSeat, seatCount)
-
-    setResult({
-      found: true,
-      fromEn: cities[fromIdx].en,
-      toEn: cities[toIdx].en,
-      departMinutes: 360 + (seed % 12) * 60,
-      seats,
-      amount: grandTotal,
-    })
   }
 
-  function saveContact(e: React.FormEvent) {
+  async function saveContact(e: React.FormEvent) {
     e.preventDefault()
-    if (!newPhone.trim()) return
-    setContactSaved(true)
-    setEditingContact(false)
+    if (!newPhone.trim() || state.phase !== "found") return
+
+    setSavingContact(true)
+    setContactError(null)
+    try {
+      const res = await fetch("/api/bookings/update-contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reference: ref.trim(), phone: phone.trim(), newPhone: newPhone.trim() }),
+      })
+
+      if (!res.ok) {
+        setContactError(t.checkout.genericError)
+        return
+      }
+
+      setContactSaved(true)
+      setEditingContact(false)
+      // شمارهٔ تماس محلی هم به‌روزرسانی می‌شود تا اگر کاربر دوباره «ویرایش»
+      // را بزند، مقدار فعلی درست نمایش داده شود.
+      setState({ phase: "found", booking: { ...state.booking, contactPhone: newPhone.trim() } })
+    } catch {
+      setContactError(t.checkout.genericError)
+    } finally {
+      setSavingContact(false)
+    }
+  }
+
+  async function submitCancellation() {
+    setCancelSubmitting(true)
+    setCancelError(null)
+    try {
+      const res = await fetch("/api/bookings/request-cancellation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reference: ref.trim(), phone: phone.trim() }),
+      })
+
+      if (res.status === 409) {
+        const body = await res.json().catch(() => ({}))
+        setCancelError(body.error === "ALREADY_CANCELLED" ? t.track.alreadyCancelled : t.track.cancelNotAllowed)
+        return
+      }
+      if (!res.ok) {
+        setCancelError(t.checkout.genericError)
+        return
+      }
+
+      setCancelSubmitted(true)
+      setCancelling(false)
+      if (state.phase === "found") {
+        setState({ phase: "found", booking: { ...state.booking, status: "cancelled" } })
+      }
+    } catch {
+      setCancelError(t.checkout.genericError)
+    } finally {
+      setCancelSubmitting(false)
+    }
   }
 
   const fieldBase =
     "w-full rounded-xl border bg-background px-3.5 py-2.5 text-start text-sm text-foreground transition-colors focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+
+  const booking = state.phase === "found" ? state.booking : null
+  const seatsLabel = booking?.passengers.map((p) => p.seatNumber).join("، ") ?? ""
+  const canManage = booking && (booking.status === "pending" || booking.status === "confirmed")
+  const statusLabel = booking
+    ? dictionary[lang].admin.status[booking.status as "pending" | "confirmed" | "cancelled" | "completed" | "refunded"]
+    : null
 
   return (
     <div className="min-h-screen bg-background">
@@ -138,15 +203,16 @@ export function BookingLookup() {
             </div>
             <button
               type="submit"
-              className="mt-1 flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              disabled={state.phase === "loading"}
+              className="mt-1 flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-70"
             >
               <Search className="size-4" />
-              {t.track.submit}
+              {state.phase === "loading" ? t.track.searching : t.track.submit}
             </button>
           </div>
         </form>
 
-        {result?.found && (
+        {booking && (
           <div className="mt-6 animate-rise-in overflow-hidden rounded-2xl border border-border bg-card">
             <div className="flex items-center gap-2 border-b border-dashed border-border/60 bg-secondary/40 px-6 py-4">
               <CircleCheck className="size-5 text-accent" />
@@ -156,119 +222,137 @@ export function BookingLookup() {
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">{t.confirm.route}</dt>
                 <dd className="flex items-center gap-1.5 font-medium text-foreground">
-                  <span>{cities.find((c) => c.en === result.fromEn)?.[lang]}</span>
+                  <span>{cityLabel(booking.trip.fromEn, lang)}</span>
                   <ArrowLeftRight className="size-3.5 shrink-0" aria-hidden="true" />
-                  <span>{cities.find((c) => c.en === result.toEn)?.[lang]}</span>
+                  <span>{cityLabel(booking.trip.toEn, lang)}</span>
                 </dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">{t.confirm.departure}</dt>
-                <dd className="font-medium text-foreground" dir="ltr">{formatTime(result.departMinutes!, lang)}</dd>
+                <dd className="font-medium text-foreground" dir="ltr">
+                  {booking.trip.departMinutes !== null
+                    ? formatTime(booking.trip.departMinutes, lang)
+                    : t.search.flexibleDeparture}
+                </dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">{t.confirm.seats}</dt>
-                <dd className={`${displayFont(lang)} font-medium text-foreground`}>{result.seats?.join("، ")}</dd>
+                <dd className={`${displayFont(lang)} font-medium text-foreground`}>{seatsLabel}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">{t.track.statusLabel}</dt>
+                <dd className="font-medium text-foreground">{statusLabel}</dd>
               </div>
               <div className="flex justify-between border-t border-border/60 pt-3 text-base">
                 <dt className="font-semibold text-foreground">{t.confirm.amount}</dt>
                 <dd className={`${displayFont(lang)} font-semibold text-foreground`}>
-                  {localizeNumber(result.amount!, lang)} {t.routes.currency}
+                  {localizeNumber(booking.totalAmount, lang)} {t.routes.currency}
                 </dd>
               </div>
             </dl>
 
-            {/* Manage booking actions */}
-            <div className="flex flex-col gap-2 border-t border-border/60 px-6 py-4 sm:flex-row">
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingContact((v) => !v)
-                  setCancelling(false)
-                }}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary"
-              >
-                <Pencil className="size-3.5" />
-                {t.track.editContact}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setCancelling((v) => !v)
-                  setEditingContact(false)
-                }}
-                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-destructive/40 py-2.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
-              >
-                <XCircle className="size-3.5" />
-                {t.track.requestCancel}
-              </button>
-            </div>
-
-            {editingContact && (
-              <form onSubmit={saveContact} className="border-t border-border/60 px-6 py-4">
-                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                  {t.track.newPhoneLabel}
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    dir="ltr"
-                    type="tel"
-                    value={newPhone}
-                    onChange={(e) => setNewPhone(e.target.value)}
-                    placeholder="07xxxxxxxx"
-                    className={`${fieldBase} flex-1`}
-                  />
-                  <button
-                    type="submit"
-                    className="shrink-0 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground"
-                  >
-                    {t.track.saveChanges}
-                  </button>
-                </div>
-              </form>
-            )}
-            {contactSaved && (
-              <p className="border-t border-border/60 px-6 py-3 text-xs leading-relaxed text-accent">
-                {t.track.contactUpdated}
-              </p>
-            )}
-
-            {cancelling && !cancelSubmitted && (
-              <div className="border-t border-border/60 px-6 py-4">
-                <p className="mb-3 text-sm font-medium text-foreground">{t.track.cancelConfirmTitle}</p>
-                <p className="mb-3 text-xs leading-relaxed text-muted-foreground">{t.track.cancelConfirmBody}</p>
-                <Link
-                  href="/faq#cancellation"
-                  className="mb-3 inline-block text-xs font-medium text-primary hover:underline"
-                >
-                  {t.track.viewCancellationPolicy}
-                </Link>
-                <div className="flex gap-2">
+            {canManage && (
+              <>
+                {/* Manage booking actions */}
+                <div className="flex flex-col gap-2 border-t border-border/60 px-6 py-4 sm:flex-row">
                   <button
                     type="button"
-                    onClick={() => setCancelSubmitted(true)}
-                    className="flex-1 rounded-xl bg-destructive/10 py-2.5 text-sm font-semibold text-destructive hover:bg-destructive/20"
+                    onClick={() => {
+                      setEditingContact((v) => !v)
+                      setCancelling(false)
+                      setCancelError(null)
+                    }}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-border py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary"
                   >
-                    {t.track.cancelAction}
+                    <Pencil className="size-3.5" />
+                    {t.track.editContact}
                   </button>
                   <button
                     type="button"
-                    onClick={() => setCancelling(false)}
-                    className="flex-1 rounded-xl border border-border py-2.5 text-sm font-medium text-foreground"
+                    onClick={() => {
+                      setCancelling((v) => !v)
+                      setEditingContact(false)
+                      setContactError(null)
+                    }}
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-destructive/40 py-2.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
                   >
-                    {t.track.cancelDismiss}
+                    <XCircle className="size-3.5" />
+                    {t.track.requestCancel}
                   </button>
                 </div>
-              </div>
-            )}
-            {cancelSubmitted && (
-              <p className="border-t border-border/60 px-6 py-3 text-xs leading-relaxed text-accent">
-                {t.track.cancelConfirmBody}
-              </p>
+
+                {editingContact && (
+                  <form onSubmit={saveContact} className="border-t border-border/60 px-6 py-4">
+                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                      {t.track.newPhoneLabel}
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        dir="ltr"
+                        type="tel"
+                        value={newPhone}
+                        onChange={(e) => setNewPhone(e.target.value)}
+                        placeholder="07xxxxxxxx"
+                        className={`${fieldBase} flex-1`}
+                      />
+                      <button
+                        type="submit"
+                        disabled={savingContact}
+                        className="shrink-0 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-70"
+                      >
+                        {savingContact ? t.track.saving : t.track.saveChanges}
+                      </button>
+                    </div>
+                    {contactError && <p className="mt-2 text-xs text-destructive">{contactError}</p>}
+                  </form>
+                )}
+                {contactSaved && (
+                  <p className="border-t border-border/60 px-6 py-3 text-xs leading-relaxed text-accent">
+                    {t.track.contactUpdated}
+                  </p>
+                )}
+
+                {cancelling && !cancelSubmitted && (
+                  <div className="border-t border-border/60 px-6 py-4">
+                    <p className="mb-3 text-sm font-medium text-foreground">{t.track.cancelConfirmTitle}</p>
+                    <p className="mb-3 text-xs leading-relaxed text-muted-foreground">{t.track.cancelConfirmBody}</p>
+                    <Link
+                      href="/faq#cancellation"
+                      className="mb-3 inline-block text-xs font-medium text-primary hover:underline"
+                    >
+                      {t.track.viewCancellationPolicy}
+                    </Link>
+                    {cancelError && <p className="mb-3 text-xs text-destructive">{cancelError}</p>}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={submitCancellation}
+                        disabled={cancelSubmitting}
+                        className="flex-1 rounded-xl bg-destructive/10 py-2.5 text-sm font-semibold text-destructive hover:bg-destructive/20 disabled:opacity-70"
+                      >
+                        {cancelSubmitting ? t.track.cancelSubmitting : t.track.cancelAction}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCancelling(false)}
+                        className="flex-1 rounded-xl border border-border py-2.5 text-sm font-medium text-foreground"
+                      >
+                        {t.track.cancelDismiss}
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {cancelSubmitted && (
+                  <p className="border-t border-border/60 px-6 py-3 text-xs leading-relaxed text-accent">
+                    {t.track.cancelConfirmBody}
+                  </p>
+                )}
+              </>
             )}
           </div>
         )}
 
-        {result && !result.found && (
+        {(state.phase === "notFound" || state.phase === "error") && (
           <div className="mt-6 animate-rise-in rounded-2xl border border-dashed border-border p-6 text-center">
             <AlertCircle className="mx-auto mb-3 size-8 text-destructive" />
             <p className="font-semibold text-foreground">{t.track.notFoundTitle}</p>
