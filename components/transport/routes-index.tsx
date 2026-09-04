@@ -3,22 +3,22 @@
 import { useMemo, useState } from "react"
 import Link from "next/link"
 import { ArrowLeftRight } from "lucide-react"
-import { cities, dictionary, displayFont, localizeNumber } from "@/lib/i18n"
+import { dictionary, displayFont, localizeNumber } from "@/lib/i18n"
 import { useLang } from "@/lib/lang-context"
-import { cityLabel, getAllRoutes } from "@/lib/booking-data"
+import { cityLabel } from "@/lib/booking-data"
+import type { CityOption, RouteOverview } from "@/lib/supabase/queries"
 import { SiteHeader } from "./site-header"
 import { SiteFooter } from "./site-footer"
 import { PlaceholderNote } from "./placeholder-badge"
 
-export function RoutesIndex() {
+export function RoutesIndex({ routes, cities }: { routes: RouteOverview[]; cities: CityOption[] }) {
   const { lang } = useLang()
   const t = dictionary[lang]
   const [origin, setOrigin] = useState("")
 
-  const allRoutes = useMemo(() => getAllRoutes(), [])
-  const routes = useMemo(
-    () => (origin ? allRoutes.filter((r) => r.fromEn === origin || r.toEn === origin) : allRoutes),
-    [allRoutes, origin],
+  const filtered = useMemo(
+    () => (origin ? routes.filter((r) => r.fromEn === origin || r.toEn === origin) : routes),
+    [routes, origin],
   )
 
   return (
@@ -54,80 +54,86 @@ export function RoutesIndex() {
           >
             <option value="">{t.routesPage.filterAll}</option>
             {cities.map((c) => (
-              <option key={c.en} value={c.en}>
-                {c[lang]}
+              <option key={c.nameEn} value={c.nameEn}>
+                {lang === "fa" ? c.nameFa : c.nameEn}
               </option>
             ))}
           </select>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-border bg-card">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px] border-collapse">
-              <thead>
-                <tr className="border-b border-border/60">
-                  <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground">
-                    {t.routesPage.colFrom}
-                  </th>
-                  <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground">
-                    {t.routesPage.colTo}
-                  </th>
-                  <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground">
-                    {t.routesPage.colDuration}
-                  </th>
-                  <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground">
-                    {t.routesPage.colPrice}
-                  </th>
-                  <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground">
-                    {t.routesPage.colDaily}
-                  </th>
-                  <th className="px-4 py-3" />
-                </tr>
-              </thead>
-              <tbody>
-                {routes.map((r) => (
-                  <tr
-                    key={`${r.fromEn}-${r.toEn}`}
-                    className="border-b border-border/40 last:border-0 hover:bg-secondary/30"
-                  >
-                    <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-foreground">
-                      {cityLabel(r.fromEn, lang)}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-foreground">
-                      <span className="flex items-center gap-1.5">
-                        <ArrowLeftRight className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-                        {cityLabel(r.toEn, lang)}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">
-                      {localizeNumber(r.hours, lang)} {t.routes.hours}
-                    </td>
-                    <td
-                      className={`${displayFont(lang)} whitespace-nowrap px-4 py-3 text-sm font-semibold text-foreground`}
-                    >
-                      <span className="rounded-md border border-dashed border-destructive/40 bg-destructive/5 px-1.5 py-0.5 text-destructive">
-                        {localizeNumber(r.price, lang)} {t.routes.currency}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">
-                      <span className="rounded-md border border-dashed border-destructive/40 bg-destructive/5 px-1.5 py-0.5 text-destructive">
-                        {localizeNumber(r.dailyTrips, lang)}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-end">
-                      <Link
-                        href={`/search?from=${encodeURIComponent(r.fromEn)}&to=${encodeURIComponent(r.toEn)}`}
-                        className="text-sm font-medium text-primary hover:underline"
-                      >
-                        {t.routesPage.view}
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {filtered.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">
+            {t.search.noResults}
           </div>
-        </div>
+        ) : (
+          <div className="overflow-hidden rounded-2xl border border-border bg-card">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[560px] border-collapse">
+                <thead>
+                  <tr className="border-b border-border/60">
+                    <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground">
+                      {t.routesPage.colFrom}
+                    </th>
+                    <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground">
+                      {t.routesPage.colTo}
+                    </th>
+                    <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground">
+                      {t.routesPage.colDuration}
+                    </th>
+                    <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground">
+                      {t.routesPage.colPrice}
+                    </th>
+                    <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground">
+                      {t.routesPage.colDaily}
+                    </th>
+                    <th className="px-4 py-3" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((r) => (
+                    <tr
+                      key={r.id}
+                      className="border-b border-border/40 last:border-0 hover:bg-secondary/30"
+                    >
+                      <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-foreground">
+                        {cityLabel(r.fromEn, lang)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-foreground">
+                        <span className="flex items-center gap-1.5">
+                          <ArrowLeftRight className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                          {cityLabel(r.toEn, lang)}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">
+                        {localizeNumber(Math.round(r.durationMinutes / 60), lang)} {t.routes.hours}
+                      </td>
+                      <td
+                        className={`${displayFont(lang)} whitespace-nowrap px-4 py-3 text-sm font-semibold text-foreground`}
+                      >
+                        <span className="rounded-md border border-dashed border-destructive/40 bg-destructive/5 px-1.5 py-0.5 text-destructive">
+                          {r.startingPrice !== null ? `${localizeNumber(r.startingPrice, lang)} ${t.routes.currency}` : "—"}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">
+                        <span className="rounded-md border border-dashed border-destructive/40 bg-destructive/5 px-1.5 py-0.5 text-destructive">
+                          {localizeNumber(r.upcomingTripsCount, lang)}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-end">
+                        <Link
+                          href={`/search?from=${encodeURIComponent(r.fromEn)}&to=${encodeURIComponent(r.toEn)}`}
+                          className="text-sm font-medium text-primary hover:underline"
+                        >
+                          {t.routesPage.view}
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
 
       <SiteFooter />

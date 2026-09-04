@@ -96,7 +96,7 @@ export const dictionary = {
       colDaily: "سرویس روزانه",
       view: "جست‌وجو و رزرو",
       priceNote:
-        "[PLACEHOLDER — نیاز به قیمت واقعی از شرکت] قیمت دقیق و تعداد سرویس روزانهٔ هر مسیر هنوز از شرکت تأیید نشده است؛ اعداد این جدول نمونه هستند و پیش از انتشار نهایی باید جایگزین شوند.",
+        "[PLACEHOLDER — نیاز به تأیید نهایی از شرکت] قیمت و تعداد سرویس هر مسیر از سفرهای فعلاً ثبت‌شده (داده‌ی آزمایشی) محاسبه شده‌اند، نه فهرست نهایی و تأییدشدهٔ شرکت؛ پیش از انتشار نهایی باید بازبینی شوند.",
     },
     fleet: {
       title: "ناوگانی که برای فاصله‌های طولانی ساخته شده",
@@ -700,7 +700,7 @@ export const dictionary = {
       colDaily: "Daily trips",
       view: "Search & book",
       priceNote:
-        "[PLACEHOLDER — needs real pricing from the company] Exact price and daily trip counts per route are not yet confirmed; the figures in this table are samples and must be replaced before launch.",
+        "[PLACEHOLDER — needs final confirmation from the company] Price and trip counts per route are calculated from currently scheduled (demo) trips, not the company's final confirmed list; they must be reviewed before launch.",
     },
     fleet: {
       title: "A fleet built for the long road",

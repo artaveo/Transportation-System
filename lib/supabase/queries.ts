@@ -427,3 +427,88 @@ export async function getBookingByReferenceAndPhone(
     passengers,
   }
 }
+
+export type RouteOverview = {
+  id: string
+  fromEn: string
+  toEn: string
+  durationMinutes: number
+  /** null یعنی هیچ سفر آینده‌ای برای این مسیر تعریف نشده — نه صفر افغانی */
+  startingPrice: number | null
+  upcomingTripsCount: number
+}
+
+/**
+ * فهرست مسیرهای فعال واقعی برای صفحهٔ عمومی «مسیرها و قیمت‌ها» (/routes،
+ * فاز ۴.۴)، جایگزین `getAllRoutes()` در lib/booking-data.ts که تا این فاز
+ * هر ۲۸ جفتِ ممکنِ شهرها را با اعداد کاملاً ساختگی (مبتنی بر hash) فهرست
+ * می‌کرد. اینجا فقط همان مسیرهایی برگردانده می‌شوند که واقعاً در جدول
+ * `routes` ثبت شده‌اند (طبق تصمیم فاز ۴.۱: «routes/buses/trips زنده عمداً
+ * خالی ماندند تا داده واقعی شرکت وارد شود»)، به‌همراه مدت سفر واقعی
+ * (`typical_duration_minutes`) و قیمت/تعداد سرویس، مشتق‌شده از خودِ سفرهای
+ * آیندهٔ ثبت‌شده — نه یک عدد ثابت روی خودِ مسیر (چون قیمت در طراحی فاز ۳.۱
+ * روی هر سفر جداگانه است، نه روی مسیر). قیمت و تعداد سرویس هنوز باید در UI
+ * پشت همان اعلامیهٔ [PLACEHOLDER] نمایش داده شوند، چون تا امروز از داده‌ی
+ * seed آزمایشی می‌آیند، نه فهرست نهایی تأییدشدهٔ شرکت.
+ */
+export async function getRoutesOverview(): Promise<RouteOverview[]> {
+  const supabase = await createClient()
+
+  const { data: routeRows, error: routeError } = await supabase
+    .from("routes")
+    .select(
+      `id, typical_duration_minutes,
+       origin:cities!routes_origin_city_id_fkey(name_en),
+       destination:cities!routes_destination_city_id_fkey(name_en)`,
+    )
+    .eq("is_active", true)
+
+  if (routeError) {
+    console.error("[getRoutesOverview] route lookup failed:", routeError.message)
+    return []
+  }
+  if (!routeRows || routeRows.length === 0) return []
+
+  const { data: tripRows, error: tripsError } = await supabase
+    .from("trips")
+    .select("route_id, price_per_seat")
+    .in(
+      "route_id",
+      routeRows.map((r) => r.id),
+    )
+    .in("status", ["scheduled", "boarding"])
+    .gte("service_date", isoToday())
+
+  if (tripsError) {
+    console.error("[getRoutesOverview] trips lookup failed:", tripsError.message)
+  }
+
+  // تجمیع سمت جاوااسکریپت (نه SQL) — دقیقاً همان الگویی که searchTrips برای
+  // شمارش صندلی‌های خالی استفاده می‌کند، چون کلاینت anon این پروژه هیچ view
+  // یا RPC تجمیعی برای این مورد ندارد.
+  const byRoute = new Map<string, { minPrice: number | null; count: number }>()
+  for (const t of tripRows ?? []) {
+    const entry = byRoute.get(t.route_id) ?? { minPrice: null, count: 0 }
+    entry.count += 1
+    const price = Number(t.price_per_seat)
+    entry.minPrice = entry.minPrice === null ? price : Math.min(entry.minPrice, price)
+    byRoute.set(t.route_id, entry)
+  }
+
+  return routeRows
+    .map((r): RouteOverview => {
+      const origin = Array.isArray(r.origin) ? r.origin[0] : r.origin
+      const destination = Array.isArray(r.destination) ? r.destination[0] : r.destination
+      const agg = byRoute.get(r.id)
+      return {
+        id: r.id,
+        fromEn: origin?.name_en ?? "",
+        toEn: destination?.name_en ?? "",
+        durationMinutes: r.typical_duration_minutes,
+        startingPrice: agg?.minPrice ?? null,
+        upcomingTripsCount: agg?.count ?? 0,
+      }
+    })
+    .filter((r) => r.fromEn && r.toEn)
+    .sort((a, b) => a.durationMinutes - b.durationMinutes)
+}
