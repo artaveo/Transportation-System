@@ -134,7 +134,7 @@ export function CheckoutForm({ trip, seatIds }: { trip: TripDetail; seatIds: str
     <div className="min-h-screen bg-background">
       <SiteHeader />
 
-      <div className="mx-auto max-w-5xl px-5 py-8 sm:px-8 3xl:max-w-6xl 4xl:max-w-7xl">
+      <div className="mx-auto max-w-5xl px-5 py-8 pb-28 sm:px-8 lg:pb-8 3xl:max-w-6xl 4xl:max-w-7xl">
         <Link
           href={`/trips/${trip.id}/seats`}
           onClick={() => {
@@ -155,7 +155,7 @@ export function CheckoutForm({ trip, seatIds }: { trip: TripDetail; seatIds: str
 
         <h1 className={`${displayFont(lang)} mb-6 text-2xl font-semibold text-foreground`}>{t.checkout.title}</h1>
 
-        <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-[1fr_320px]">
+        <form id="checkout-form" onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-[1fr_320px]">
           <div className="flex flex-col gap-6">
             {/* Passenger details */}
             <div className="rounded-2xl border border-border bg-card p-5">
@@ -339,8 +339,10 @@ export function CheckoutForm({ trip, seatIds }: { trip: TripDetail; seatIds: str
             </div>
           </div>
 
-          {/* Summary */}
-          <aside className="sticky top-24 h-fit rounded-2xl border border-border bg-card p-5">
+          {/* Summary — sticky only from lg up (row #13/#14: below lg the
+              fixed CTA bar rendered after the form carries the submit
+              action, since the two-column grid stacks vertically here). */}
+          <aside className="h-fit rounded-2xl border border-border bg-card p-5 lg:sticky lg:top-24">
             <h2 className="mb-4 text-sm font-semibold text-foreground">{t.checkout.summaryTitle}</h2>
             <dl className="flex flex-col gap-2.5 text-sm">
               <div className="flex justify-between">
@@ -403,12 +405,35 @@ export function CheckoutForm({ trip, seatIds }: { trip: TripDetail; seatIds: str
             <button
               type="submit"
               disabled={submitting}
-              className="mt-5 w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-40"
+              className="mt-5 hidden w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-40 lg:block"
             >
               {submitting ? t.checkout.submitting : t.checkout.pay}
             </button>
           </aside>
         </form>
+      </div>
+
+      {/* فاز ۴.۸ (رفع ردیف #۱۳/#۱۴ — بحرانی): نوار CTA ثابت زیر lg. دکمه با
+          form="checkout-form" همچنان همان فرم بالا را سابمیت می‌کند، با
+          اینکه بیرون از تگ <form> رندر شده (رفتار استاندارد HTML5). */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 px-5 py-3 backdrop-blur-sm shadow-[0_-4px_16px_rgba(0,0,0,0.15)] lg:hidden">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
+          <div>
+            <p className="text-xs text-muted-foreground">{t.checkout.grandTotal}</p>
+            <p className={`${displayFont(lang)} text-base font-semibold text-foreground`}>
+              {localizeNumber(grandTotal, lang)} {t.routes.currency}
+            </p>
+          </div>
+          <button
+            type="submit"
+            form="checkout-form"
+            disabled={submitting}
+            className="rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-40"
+          >
+            {submitting ? t.checkout.submitting : t.checkout.pay}
+          </button>
+        </div>
+        {serverError && <p className="mt-1.5 text-center text-xs text-destructive">{t.checkout[serverError]}</p>}
       </div>
     </div>
   )

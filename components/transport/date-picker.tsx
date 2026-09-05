@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { jalaaliMonthLength } from "jalaali-js"
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react"
+import { autoUpdate, flip, offset, shift, useFloating } from "@floating-ui/react-dom"
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, X } from "lucide-react"
 import type { Lang } from "@/lib/i18n"
 import { dictionary } from "@/lib/i18n"
 import {
@@ -32,6 +33,21 @@ const POPUP_WIDTH = 300
 
 type Cell = { iso: string; day: number; inMonth: boolean; disabled: boolean }
 
+// فاز ۴.۸ (رفع ردیف #۱۷ — بحرانی): زیر بریک‌پوینت sm (۶۴۰px) تقویم دیگر
+// پاپ‌آوری چسبیده به input نیست (که روی گوشی معمولاً از پایین صفحه بیرون
+// می‌زد)، بلکه یک modal تمام‌عرض وسط صفحه است — دقیقاً درخواست Zakir.
+function useIsMobilePicker() {
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 639px)")
+    setIsMobile(mql.matches)
+    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    mql.addEventListener("change", onChange)
+    return () => mql.removeEventListener("change", onChange)
+  }, [])
+  return isMobile
+}
+
 export function DatePicker({
   lang,
   value,
@@ -54,13 +70,21 @@ export function DatePicker({
   const [inputError, setInputError] = useState(false)
   const [viewY, setViewY] = useState(0)
   const [viewM, setViewM] = useState(0)
-  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null)
+  const isMobile = useIsMobilePicker()
 
-  // fieldRef anchors the visible input (used to compute the popover's
-  // position); popoverRef is the portaled dropdown itself. Both must be
-  // checked for outside-click, since the portal renders outside fieldRef's
-  // own DOM subtree.
-  const fieldRef = useRef<HTMLDivElement>(null)
+  // فاز ۴.۸ (رفع ردیف #۱۷): محاسبهٔ دستی موقعیت (rect.bottom + 8، بدون
+  // بررسی فضای خالی) با @floating-ui/react-dom جایگزین شد — میان‌افزارهای
+  // flip/shift به‌صورت خودکار در صورت کمبود جا، پاپ‌آور را برمی‌گردانند/جابه‌جا
+  // می‌کنند و autoUpdate هنگام اسکرول/ریسایز موقعیت را تازه نگه می‌دارد. این
+  // مسیر فقط برای دسکتاپ/تبلت به بالا فعال است؛ روی موبایل به‌جای آن یک modal
+  // مستقل (پایین‌تر) رندر می‌شود.
+  const { refs, floatingStyles } = useFloating({
+    open: open && !isMobile,
+    placement: lang === "fa" ? "bottom-end" : "bottom-start",
+    strategy: "fixed",
+    middleware: [offset(8), flip({ padding: 8 }), shift({ padding: 8 })],
+    whileElementsMounted: autoUpdate,
+  })
   const popoverRef = useRef<HTMLDivElement>(null)
 
   function viewOf(iso: string, sys: CalendarSystem) {
@@ -70,15 +94,6 @@ export function DatePicker({
     }
     const [y, m] = iso.split("-").map(Number)
     return { y, m }
-  }
-
-  function updateCoords() {
-    const el = fieldRef.current
-    if (!el) return
-    const rect = el.getBoundingClientRect()
-    const rawLeft = lang === "fa" ? rect.right - POPUP_WIDTH : rect.left
-    const clampedLeft = Math.min(Math.max(rawLeft, 8), window.innerWidth - POPUP_WIDTH - 8)
-    setCoords({ top: rect.bottom + 8, left: clampedLeft })
   }
 
   useEffect(() => {
@@ -92,32 +107,26 @@ export function DatePicker({
     setInputError(false)
   }, [value, lang, system])
 
-  // Outside-click closes the popover; scrolling or resizing just repositions
-  // it (it used to close on scroll because its position was tied to normal
-  // document flow inside a clipped ancestor — this keeps it open and anchored).
+  // Outside-click and Escape close the popover/modal. Repositioning while
+  // open (desktop/tablet) is now handled by floating-ui's autoUpdate, not
+  // manually here.
   useEffect(() => {
     if (!open) return
     function handlePointerDown(e: MouseEvent) {
       const target = e.target as Node
-      if (fieldRef.current?.contains(target)) return
+      const anchor = refs.reference.current as HTMLElement | null
+      if (anchor?.contains(target)) return
       if (popoverRef.current?.contains(target)) return
       setOpen(false)
-    }
-    function handleReposition() {
-      updateCoords()
     }
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false)
     }
     document.addEventListener("mousedown", handlePointerDown)
     document.addEventListener("keydown", handleKeyDown)
-    window.addEventListener("scroll", handleReposition, true)
-    window.addEventListener("resize", handleReposition)
     return () => {
       document.removeEventListener("mousedown", handlePointerDown)
       document.removeEventListener("keydown", handleKeyDown)
-      window.removeEventListener("scroll", handleReposition, true)
-      window.removeEventListener("resize", handleReposition)
     }
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -125,7 +134,6 @@ export function DatePicker({
     const v = viewOf(value || today, system)
     setViewY(v.y)
     setViewM(v.m)
-    updateCoords()
     setOpen(true)
   }
 
@@ -222,14 +230,107 @@ export function DatePicker({
   const fieldBase =
     "w-full rounded-xl border bg-background/60 py-3 text-foreground transition-colors focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
 
+  // Shared calendar body — identical markup for both the desktop/tablet
+  // floating popover and the mobile centered modal; only the wrapping
+  // container differs below.
+  const calendarBody = (
+    <>
+      {/* Calendar system toggle — always visible so it's never ambiguous
+          which calendar the grid/date belongs to. */}
+      <div className="mb-3 flex gap-1 rounded-lg bg-secondary p-1 text-xs">
+        <button
+          type="button"
+          onClick={() => setSystem("shamsi")}
+          className={`flex-1 rounded-md py-1.5 font-medium transition-colors ${
+            system === "shamsi" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {lang === "fa" ? "شمسی" : "Shamsi"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setSystem("gregorian")}
+          className={`flex-1 rounded-md py-1.5 font-medium transition-colors ${
+            system === "gregorian" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {lang === "fa" ? "میلادی" : "Gregorian"}
+        </button>
+      </div>
+
+      <div className="mb-2 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={goPrevMonth}
+          disabled={prevDisabled}
+          className="flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary disabled:pointer-events-none disabled:opacity-30 sm:size-7"
+        >
+          {lang === "fa" ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
+        </button>
+        <span className={`${lang === "en" ? "font-serif" : ""} text-sm font-semibold text-foreground`}>
+          {monthLabel}
+        </span>
+        <button
+          type="button"
+          onClick={goNextMonth}
+          disabled={nextDisabled}
+          className="flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary disabled:pointer-events-none disabled:opacity-30 sm:size-7"
+        >
+          {lang === "fa" ? <ChevronLeft className="size-4" /> : <ChevronRight className="size-4" />}
+        </button>
+      </div>
+
+      <div className="grid grid-cols-7 gap-1 text-center text-[11px] text-muted-foreground">
+        {weekdayLabels.map((w) => (
+          <span key={w}>{w}</span>
+        ))}
+      </div>
+
+      <div className="mt-1 grid grid-cols-7 gap-1">
+        {cells.map((c, i) => {
+          if (!c.inMonth) return <span key={i} />
+          const isSelected = c.iso === value
+          const isToday = c.iso === today
+          return (
+            <button
+              key={c.iso}
+              type="button"
+              disabled={c.disabled}
+              onClick={() => selectDay(c.iso)}
+              className={`flex size-10 items-center justify-center rounded-lg text-sm transition-colors sm:size-9 ${
+                isSelected
+                  ? "bg-primary font-semibold text-primary-foreground"
+                  : isToday
+                    ? "border border-primary text-primary"
+                    : c.disabled
+                      ? "text-muted-foreground/30"
+                      : "text-foreground hover:bg-secondary"
+              }`}
+            >
+              {localizeDigits(c.day, lang)}
+            </button>
+          )
+        })}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => selectDay(today)}
+        className="mt-3 w-full rounded-lg border border-border py-2.5 text-xs font-medium text-primary transition-colors hover:bg-secondary sm:py-2"
+      >
+        {lang === "fa" ? "امروز" : "Today"}
+      </button>
+    </>
+  )
+
   return (
-    <div ref={fieldRef} className="relative">
+    <div ref={refs.setReference} className="relative">
       <label className="mb-1.5 block text-xs font-medium text-muted-foreground">{t.hero.date}</label>
       <button
         type="button"
         onClick={openPicker}
         aria-label={t.hero.date}
-        className="absolute bottom-3.5 start-3 z-10 text-muted-foreground hover:text-primary"
+        className="absolute bottom-0 start-0 z-10 flex size-11 items-center justify-center text-muted-foreground hover:text-primary"
       >
         <CalendarIcon className="size-4" />
       </button>
@@ -247,107 +348,55 @@ export function DatePicker({
           }
         }}
         placeholder={system === "shamsi" ? "۱۴۰۵/۰۶/۱۲" : "2026-09-03"}
-        className={`${fieldBase} ps-9 pe-3 ${inputError ? "border-destructive" : "border-border"}`}
+        className={`${fieldBase} ps-11 pe-3 ${inputError ? "border-destructive" : "border-border"}`}
       />
 
       {open &&
-        coords &&
         typeof document !== "undefined" &&
-        createPortal(
-          <div
-            ref={popoverRef}
-            dir={lang === "fa" ? "rtl" : "ltr"}
-            style={{ position: "fixed", top: coords.top, left: coords.left, width: POPUP_WIDTH }}
-            className="z-[200] rounded-2xl border border-border bg-card p-4 shadow-2xl shadow-black/40"
-          >
-            {/* Calendar system toggle — always visible so it's never ambiguous
-                which calendar the grid/date belongs to. */}
-            <div className="mb-3 flex gap-1 rounded-lg bg-secondary p-1 text-xs">
-              <button
-                type="button"
-                onClick={() => setSystem("shamsi")}
-                className={`flex-1 rounded-md py-1.5 font-medium transition-colors ${
-                  system === "shamsi" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-                }`}
+        (isMobile
+          ? createPortal(
+              // موبایل (زیر ۶۴۰px): modal تمام‌عرض وسط صفحه — نه popover
+              // چسبیده به input که از پایین صفحه بیرون می‌زد (ردیف #۱۷).
+              <div
+                className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-4"
+                onClick={(e) => {
+                  if (e.target === e.currentTarget) setOpen(false)
+                }}
               >
-                {lang === "fa" ? "شمسی" : "Shamsi"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setSystem("gregorian")}
-                className={`flex-1 rounded-md py-1.5 font-medium transition-colors ${
-                  system === "gregorian" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-                }`}
+                <div
+                  ref={popoverRef}
+                  dir={lang === "fa" ? "rtl" : "ltr"}
+                  className="w-full max-w-sm rounded-2xl border border-border bg-card p-4 shadow-2xl shadow-black/40"
+                >
+                  <div className="mb-1 flex items-center justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setOpen(false)}
+                      aria-label={lang === "fa" ? "بستن" : "Close"}
+                      className="flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
+                  {calendarBody}
+                </div>
+              </div>,
+              document.body,
+            )
+          : createPortal(
+              <div
+                ref={(node) => {
+                  refs.setFloating(node)
+                  popoverRef.current = node
+                }}
+                dir={lang === "fa" ? "rtl" : "ltr"}
+                style={{ ...floatingStyles, width: POPUP_WIDTH }}
+                className="z-[200] rounded-2xl border border-border bg-card p-4 shadow-2xl shadow-black/40"
               >
-                {lang === "fa" ? "میلادی" : "Gregorian"}
-              </button>
-            </div>
-
-            <div className="mb-2 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={goPrevMonth}
-                disabled={prevDisabled}
-                className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary disabled:pointer-events-none disabled:opacity-30"
-              >
-                {lang === "fa" ? <ChevronRight className="size-4" /> : <ChevronLeft className="size-4" />}
-              </button>
-              <span className={`${lang === "en" ? "font-serif" : ""} text-sm font-semibold text-foreground`}>
-                {monthLabel}
-              </span>
-              <button
-                type="button"
-                onClick={goNextMonth}
-                disabled={nextDisabled}
-                className="flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary disabled:pointer-events-none disabled:opacity-30"
-              >
-                {lang === "fa" ? <ChevronLeft className="size-4" /> : <ChevronRight className="size-4" />}
-              </button>
-            </div>
-
-            <div className="grid grid-cols-7 gap-1 text-center text-[11px] text-muted-foreground">
-              {weekdayLabels.map((w) => (
-                <span key={w}>{w}</span>
-              ))}
-            </div>
-
-            <div className="mt-1 grid grid-cols-7 gap-1">
-              {cells.map((c, i) => {
-                if (!c.inMonth) return <span key={i} />
-                const isSelected = c.iso === value
-                const isToday = c.iso === today
-                return (
-                  <button
-                    key={c.iso}
-                    type="button"
-                    disabled={c.disabled}
-                    onClick={() => selectDay(c.iso)}
-                    className={`flex size-9 items-center justify-center rounded-lg text-sm transition-colors ${
-                      isSelected
-                        ? "bg-primary font-semibold text-primary-foreground"
-                        : isToday
-                          ? "border border-primary text-primary"
-                          : c.disabled
-                            ? "text-muted-foreground/30"
-                            : "text-foreground hover:bg-secondary"
-                    }`}
-                  >
-                    {localizeDigits(c.day, lang)}
-                  </button>
-                )
-              })}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => selectDay(today)}
-              className="mt-3 w-full rounded-lg border border-border py-2 text-xs font-medium text-primary transition-colors hover:bg-secondary"
-            >
-              {lang === "fa" ? "امروز" : "Today"}
-            </button>
-          </div>,
-          document.body,
-        )}
+                {calendarBody}
+              </div>,
+              document.body,
+            ))}
     </div>
   )
 }

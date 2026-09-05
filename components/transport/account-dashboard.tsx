@@ -36,7 +36,9 @@ export function AccountDashboard({
           <AccountLogoutButton />
         </div>
 
-        <div className="grid gap-5 lg:grid-cols-3">
+        {/* فاز ۴.۸ (رفع ردیف #۱ — متوسط): رده میانی sm اضافه شد تا تبلت
+            مستقیم از تک‌ستونه به سه‌ستونه (lg) نپرد. */}
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           <TierBadge account={account} lang={lang} />
           <WalletCard account={account} lang={lang} />
           <ReferralCard account={account} lang={lang} />

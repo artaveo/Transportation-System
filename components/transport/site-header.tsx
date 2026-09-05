@@ -79,7 +79,7 @@ export function SiteHeader() {
           </Link>
           <button
             onClick={() => setOpen((v) => !v)}
-            className="flex size-9 items-center justify-center rounded-md text-foreground md:hidden"
+            className="flex size-11 items-center justify-center rounded-md text-foreground md:hidden"
             aria-label="Menu"
             aria-expanded={open}
           >

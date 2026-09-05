@@ -98,7 +98,7 @@ export function SeatSelection({ trip }: { trip: TripDetail }) {
     <div className="min-h-screen bg-background">
       <SiteHeader />
 
-      <div className="mx-auto max-w-5xl px-5 py-8 sm:px-8 3xl:max-w-6xl 4xl:max-w-7xl">
+      <div className="mx-auto max-w-5xl px-5 py-8 pb-28 sm:px-8 lg:pb-8 3xl:max-w-6xl 4xl:max-w-7xl">
         <Link href="/search" className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <BackIcon className="size-4" />
           {t.common.back}
@@ -187,8 +187,11 @@ export function SeatSelection({ trip }: { trip: TripDetail }) {
             </div>
           </div>
 
-          {/* Summary sidebar */}
-          <aside className="sticky top-24 h-fit rounded-2xl border border-border bg-card p-5">
+          {/* Summary sidebar — sticky only from lg up, where the two-column
+              grid actually places it beside the seat map. Below lg the grid
+              stacks vertically, so a separate fixed CTA bar (rendered after
+              this grid) carries the primary action instead (row #13/#14). */}
+          <aside className="h-fit rounded-2xl border border-border bg-card p-5 lg:sticky lg:top-24">
             <h3 className="mb-4 text-sm font-semibold text-foreground">{t.seats.selectedTitle}</h3>
             {selected.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t.seats.none}</p>
@@ -221,12 +224,35 @@ export function SeatSelection({ trip }: { trip: TripDetail }) {
             <button
               onClick={continueToCheckout}
               disabled={selected.length === 0 || submitting}
-              className="mt-5 w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-40"
+              className="mt-5 hidden w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-40 lg:block"
             >
               {submitting ? t.seats.holding : t.seats.continueToCheckout}
             </button>
           </aside>
         </div>
+      </div>
+
+      {/* فاز ۴.۸ (رفع ردیف #۱۳/#۱۴ — بحرانی): نوار CTA ثابت مستقل از گرید،
+          زیر lg، همیشه دکمهٔ نهایی را در دید کاربر نگه می‌دارد. */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 px-5 py-3 backdrop-blur-sm shadow-[0_-4px_16px_rgba(0,0,0,0.15)] lg:hidden">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
+          <div>
+            <p className="text-xs text-muted-foreground">{t.common.total}</p>
+            <p className={`${displayFont(lang)} text-base font-semibold text-foreground`}>
+              {localizeNumber(total, lang)} {t.routes.currency}
+            </p>
+          </div>
+          <button
+            onClick={continueToCheckout}
+            disabled={selected.length === 0 || submitting}
+            className="rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-40"
+          >
+            {submitting ? t.seats.holding : t.seats.continueToCheckout}
+          </button>
+        </div>
+        {(limitNotice || holdError) && (
+          <p className="mt-1.5 text-center text-xs text-destructive">{limitNotice ? t.seats.max : t.seats[holdError!]}</p>
+        )}
       </div>
     </div>
   )
@@ -254,7 +280,7 @@ function SeatButton({
       disabled={isBooked}
       aria-label={`${t.seats.seatLabel} ${seat.seatNumber} — ${statusText}`}
       aria-pressed={selected}
-      className={`relative flex size-10 items-center justify-center rounded-md text-[10px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:size-11 ${
+      className={`relative flex size-11 items-center justify-center rounded-md text-[10px] font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
         isBooked
           ? "cursor-not-allowed bg-secondary text-muted-foreground/50 opacity-60 [background-image:repeating-linear-gradient(45deg,transparent,transparent_3px,var(--border)_3px,var(--border)_4px)]"
           : selected

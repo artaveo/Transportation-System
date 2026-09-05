@@ -77,13 +77,18 @@ export function DestinationsGrid({ lang }: { lang: Lang }) {
           {/* Scroll affordance — fades the edges on mobile so the row reads
               as "scroll for more" instead of an abrupt, unfinished-looking
               cut-off icon at the viewport edge. Not needed once sm:
-              switches to overflow-visible (everything fits, no scrolling). */}
+              switches to overflow-visible (everything fits, no scrolling).
+              فاز ۴.۸ (رفع ردیف #۳ — متوسط): این دو المان همیشه left-0/right-0
+              فیزیکی هستند (نه start-0/end-0 منطقی)، چون محتوای داخل همیشه
+              dir="ltr" اجباری دارد (ترتیب جغرافیایی کابل→هرات) صرف‌نظر از
+              جهت خودِ صفحه؛ استفاده از start/end منطقی روی نسخهٔ دری سمت
+              گرادیان را برعکس می‌کرد. */}
           <div
-            className="pointer-events-none absolute inset-y-0 start-0 w-8 bg-gradient-to-r from-secondary/40 to-transparent rtl:bg-gradient-to-l sm:hidden"
+            className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-secondary/40 to-transparent sm:hidden"
             aria-hidden="true"
           />
           <div
-            className="pointer-events-none absolute inset-y-0 end-0 w-8 bg-gradient-to-l from-secondary/40 to-transparent rtl:bg-gradient-to-r sm:hidden"
+            className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-secondary/40 to-transparent sm:hidden"
             aria-hidden="true"
           />
         </div>

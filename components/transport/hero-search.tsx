@@ -35,31 +35,47 @@ export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] 
 
   return (
     <section className="relative isolate">
-      {/* Dusk sky atmospheric anchor. Mobile + desktop crops in for now
-          (phase 4.6); tablet/wide will slot into the same component with
-          no code change once those crops exist — see ResponsivePhoto. */}
+      {/* Dusk sky atmospheric anchor. Mobile + desktop crops are the real
+          hero photos (phase 4.6). tablet/wide crops below are TEMPORARY —
+          they reuse about-page's corridor-dusk images (which happen to be
+          the exact same pixel dimensions as what hero needs at those
+          tiers, since both were generated from the same v0.dev prompt
+          family), until the real hero-specific tablet/wide crops exist.
+          [PLACEHOLDER] فاز ۴.۶ (تکمیل ردیف #۱۰): عکس واقعی هیروی
+          تبلت/عریض هنوز وجود ندارد — پرامپت اصلی v0.dev این عکس در دسترس
+          Zakir نیست. به‌جای حدس‌زدن پرامپت جدید، موقتاً از عکس صفحهٔ
+          درباره‌ما (`about-corridor-dusk-tablet.png` / `-wide.png`) که
+          دقیقاً هم‌ابعاد نسخهٔ موبایل/دسکتاپ هیرو هستند استفاده شد. باید
+          هر وقت عکس واقعی هیرو برای این دو ردهٔ دیگر ساخته شد (تصمیم
+          Zakir)، این دو خط جایگزین شوند. */}
       <div className="absolute inset-0 -z-10">
         <ResponsivePhoto
           alt=""
           aria-hidden="true"
           className="size-full object-cover"
           mobile="/images/hero-road-dusk-mobile.png"
+          tablet="/images/about-corridor-dusk-tablet.png"
           desktop="/images/hero-road-dusk.png"
+          wide="/images/about-corridor-dusk-wide.png"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/60 to-background" />
         <div className="absolute inset-0 bg-gradient-to-r from-background/80 to-transparent rtl:bg-gradient-to-l" />
       </div>
 
-      <div className="mx-auto max-w-6xl px-5 pb-14 pt-16 sm:px-8 sm:pb-20 sm:pt-24 3xl:max-w-7xl 4xl:max-w-[110rem]">
+      {/* فاز ۴.۸ (رفع ردیف #۱۸ — بحرانی): فاصله‌گذاری عمودی روی موبایل جمع‌تر
+          شد («هیرو = MVP») تا کل ویجت جستجو بدون اسکرول دیده شود؛ خودِ متن
+          تیتر/زیرتیتر تغییر نکرده (کوتاه‌کردن محتوا نیاز به هماهنگی با
+          Zakir دارد — یادداشت در چک‌لیست پایان فاز). */}
+      <div className="mx-auto max-w-6xl px-5 pb-8 pt-8 sm:px-8 sm:pb-16 sm:pt-20 md:pb-20 md:pt-24 3xl:max-w-7xl 4xl:max-w-[110rem]">
         <div className="max-w-2xl animate-rise-in">
-          <p className="mb-4 flex items-center gap-2 text-sm font-medium text-primary">
+          <p className="mb-2.5 flex items-center gap-2 text-sm font-medium text-primary sm:mb-4">
             <span className="h-px w-8 bg-primary" aria-hidden="true" />
             {t.hero.kicker}
           </p>
-          <h1 className={`break-words ${displayFont(lang)} text-4xl font-semibold leading-[1.1] tracking-tight text-foreground sm:text-5xl lg:text-6xl`}>
+          <h1 className={`break-words ${displayFont(lang)} text-3xl font-semibold leading-[1.1] tracking-tight text-foreground sm:text-5xl lg:text-6xl`}>
             {t.hero.title}
           </h1>
-          <p className="mt-5 max-w-xl text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
+          <p className="mt-3 max-w-xl text-pretty text-sm leading-relaxed text-muted-foreground sm:mt-5 sm:text-lg">
             {t.hero.subtitle}
           </p>
         </div>
@@ -67,10 +83,10 @@ export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] 
         {/* Search form — the hero's main element */}
         <form
           onSubmit={submit}
-          className="mt-9 animate-rise-in rounded-2xl border border-border bg-card/85 p-4 shadow-2xl shadow-black/40 backdrop-blur-md sm:mt-12 sm:p-5"
+          className="mt-5 animate-rise-in rounded-2xl border border-border bg-card/85 p-3.5 shadow-2xl shadow-black/40 backdrop-blur-md sm:mt-12 sm:p-5"
           style={{ animationDelay: "120ms" }}
         >
-          <p className="mb-3.5 flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
+          <p className="mb-2.5 flex items-start gap-2 text-xs leading-relaxed text-muted-foreground sm:mb-3.5">
             <Info className="mt-0.5 size-3.5 shrink-0 text-primary" />
             {t.hero.helper}
           </p>
@@ -80,7 +96,7 @@ export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] 
               single stacked column. Full 5-column inline layout only kicks
               in from 1280px (xl) — 1024px (tablet-landscape) was too tight
               for five inline controls including the date picker. */}
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_auto_1fr_1fr_auto] xl:items-end">
+          <div className="grid gap-2.5 sm:gap-3 md:grid-cols-2 xl:grid-cols-[1fr_auto_1fr_1fr_auto] xl:items-end">
             {/* Origin */}
             <div className="relative">
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
@@ -144,7 +160,7 @@ export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] 
             </button>
           </div>
 
-          <div className="mt-3 flex items-center gap-2 border-t border-border/60 pt-3 text-sm text-muted-foreground">
+          <div className="mt-2 flex items-center gap-2 border-t border-border/60 pt-2 text-sm text-muted-foreground sm:mt-3 sm:pt-3">
             <Users className="size-4" />
             <span>1 {t.hero.passenger}</span>
           </div>

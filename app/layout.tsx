@@ -1,7 +1,10 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Fraunces, Vazirmatn } from 'next/font/google'
+import { cookies } from 'next/headers'
 import { LangProvider } from '@/lib/lang-context'
+import { dictionary, type Lang } from '@/lib/i18n'
+import { LANG_COOKIE_NAME, isValidLang } from '@/lib/lang-cookie'
 import './globals.css'
 
 const vazirmatn = Vazirmatn({
@@ -27,15 +30,29 @@ export const viewport: Viewport = {
   themeColor: '#16213E',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  // فاز ۴.۸ (رفع ردیف #۲۳ — بحرانی): زبان از کوکی (نه localStorage) در همان
+  // لحظهٔ رندر سرور خوانده می‌شود تا dir/lang درست از همان اولین بایتِ HTML
+  // روی <html> باشد و کاربر انگلیسی‌زبان دیگر فلاش RTL نبیند. الگوی رسمی
+  // Next.js برای مشکلات هم‌خانواده (فلاش تم/زبان).
+  const cookieStore = await cookies()
+  const savedLang = cookieStore.get(LANG_COOKIE_NAME)?.value
+  const initialLang: Lang = isValidLang(savedLang) ? savedLang : 'fa'
+  const htmlLang = initialLang === 'fa' ? 'fa-AF' : 'en'
+  const htmlDir = dictionary[initialLang].dir
+
   return (
-    <html lang="fa-AF" dir="rtl" className={`${vazirmatn.variable} ${fraunces.variable} bg-background`}>
+    <html
+      lang={htmlLang}
+      dir={htmlDir}
+      className={`${vazirmatn.variable} ${fraunces.variable} bg-background`}
+    >
       <body className="antialiased">
-        <LangProvider>{children}</LangProvider>
+        <LangProvider initialLang={initialLang}>{children}</LangProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

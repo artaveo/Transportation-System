@@ -67,8 +67,14 @@ export function RoutesIndex({ routes, cities }: { routes: RouteOverview[]; citie
           </div>
         ) : (
           <div className="overflow-hidden rounded-2xl border border-border bg-card">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[560px] border-collapse">
+            {/* فاز ۴.۸ (رفع ردیف #۲۰ — متوسط): گرادیان محو دو لبه، مثل
+                destinations-grid، تا «قابل‌اسکرول‌بودن افقی جدول» زیر
+                min-w-[560px] بصری نشان داده شود. اینجا برخلاف
+                destinations-grid محتوا dir فیزیکی اجباری ندارد (جهت جدول از
+                جهت صفحه پیروی می‌کند)، پس start-0/end-0 منطقی درست است. */}
+            <div className="relative">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[560px] border-collapse">
                 <thead>
                   <tr className="border-b border-border/60">
                     <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground">
@@ -131,6 +137,15 @@ export function RoutesIndex({ routes, cities }: { routes: RouteOverview[]; citie
                   ))}
                 </tbody>
               </table>
+              </div>
+              <div
+                className="pointer-events-none absolute inset-y-0 start-0 w-8 bg-gradient-to-r from-card to-transparent sm:hidden"
+                aria-hidden="true"
+              />
+              <div
+                className="pointer-events-none absolute inset-y-0 end-0 w-8 bg-gradient-to-l from-card to-transparent sm:hidden"
+                aria-hidden="true"
+              />
             </div>
           </div>
         )}

@@ -31,7 +31,9 @@ export function WhyUs({ lang }: { lang: Lang }) {
           <p className="mt-3 text-pretty leading-relaxed text-muted-foreground">{t.whyUs.subtitle}</p>
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 3xl:grid-cols-6">
+        {/* فاز ۴.۸ (رفع ردیف #۲۵ — جزئی): رده‌های میانی xl/2xl اضافه شد تا
+            گرید مستقیم از lg (۳ ستون) به 3xl (۶ ستون) نپرد. */}
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6">
           {t.whyUs.items.map((item, i) => {
             const Icon = icons[i] ?? BusFront
             const accent = ACCENTS[i % ACCENTS.length]
