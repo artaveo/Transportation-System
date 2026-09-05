@@ -52,6 +52,18 @@ export interface ResponsivePhotoProps {
    * priority, since it's usually the page's LCP element.
    */
   priority?: boolean
+  /**
+   * CSS `object-position` for the underlying `<img>`. Defaults to center
+   * (identical to plain `object-cover` behavior). فاز ۴.۶ (رفع ردیف ۱۲.۸ —
+   * بریدگی عکس روی مانیتور خیلی بزرگ): برای عکس‌های اتمسفریک این خانواده
+   * (هیرو/ناوگان/درباره‌ما)، سوژهٔ اصلی — درخشش غروب و خط کوه‌ها — طبق
+   * اندازه‌گیری واقعی پیکسل، حدود ۵۵٪ تا ۱۰۰٪ ارتفاعِ عکس است، نه وسط آن؛
+   * وقتی باکس نمایش خیلی عریض/کوتاه می‌شود (مانیتور فوق‌عریض) و برشِ
+   * عمودی زیادی لازم است، `object-position: center` وسط تصویر (که فقط
+   * آسمان خالی است) را نگه می‌دارد و دقیقاً همان قسمت کوه‌ها/درخشش را
+   * می‌بُرد. `center 70%` این را با پایین‌کشیدن نقطهٔ لنگر جبران می‌کند.
+   */
+  objectPosition?: string
 }
 
 // عمداً کمی بالاتر از پیش‌فرض ۷۵ خودِ Next.js — این عکس‌ها اتمسفریک/تمام‌عرض
@@ -79,6 +91,7 @@ export function ResponsivePhoto({
   tablet,
   wide,
   priority,
+  objectPosition,
   ...rest
 }: ResponsivePhotoProps) {
   const desktopImg = opt(desktop, priority)
@@ -96,6 +109,7 @@ export function ResponsivePhoto({
         src={mobileImg.src}
         alt={alt}
         className={className}
+        style={objectPosition ? { ...mobileImg.style, objectPosition } : mobileImg.style}
         {...rest}
       />
     </picture>

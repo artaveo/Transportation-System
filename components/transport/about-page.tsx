@@ -21,12 +21,13 @@ export function AboutPage() {
       {/* Intro — real corridor photo (mountain highway at dusk) as the
           background, same family of treatment as the homepage hero and the
           fleet section's photo. Four device-tier crops (phase 4.6). */}
-      <section className="relative isolate overflow-hidden">
+      <section className="relative isolate overflow-hidden 3xl:min-h-[640px] 4xl:min-h-[860px]">
         <div className="absolute inset-0 -z-10">
           <ResponsivePhoto
             alt=""
             aria-hidden="true"
             className="size-full object-cover"
+            objectPosition="center 70%"
             mobile="/images/about-corridor-dusk-mobile.png"
             tablet="/images/about-corridor-dusk-tablet.png"
             desktop="/images/about-corridor-dusk.png"

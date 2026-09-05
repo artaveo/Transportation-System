@@ -34,7 +34,7 @@ export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] 
     "w-full rounded-xl border border-border bg-background/60 py-3 text-foreground transition-colors focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
 
   return (
-    <section className="relative isolate">
+    <section className="relative isolate 3xl:min-h-[640px] 4xl:min-h-[860px]">
       {/* Dusk sky atmospheric anchor. Mobile + desktop crops are the real
           hero photos (phase 4.6). tablet/wide crops below are TEMPORARY —
           they reuse about-page's corridor-dusk images (which happen to be
@@ -54,6 +54,7 @@ export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] 
           aria-hidden="true"
           className="size-full object-cover"
           priority
+          objectPosition="center 70%"
           mobile="/images/hero-road-dusk-mobile.png"
           tablet="/images/about-corridor-dusk-tablet.png"
           desktop="/images/hero-road-dusk.png"

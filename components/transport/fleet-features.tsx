@@ -11,18 +11,27 @@ export function FleetFeatures({ lang }: { lang: Lang }) {
   const t = dictionary[lang]
 
   return (
-    <section id="fleet" className="relative isolate scroll-mt-16 overflow-hidden border-y border-border/60 bg-background py-16 sm:py-24">
+    <section id="fleet" className="relative isolate scroll-mt-16 overflow-hidden border-y border-border/60 bg-background py-16 sm:py-24 3xl:min-h-[640px] 4xl:min-h-[860px]">
       {/* Real fleet photo as an atmospheric decorative band. Bounded to a
           fixed height (not the section's full height) because on mobile
           the section is very tall (4 cards stacked in 1 column) — letting
           a 4:5 photo fill that tall/narrow box would crop it down to an
           unrecognizable sliver. At `lg` the grid becomes 1 row of 4 cards
-          and the section is short enough for the photo to cover it fully. */}
+          and the section is short enough for the photo to cover it fully.
+          فاز ۴.۶ (رفع ردیف ۱۲.۸ — سرِ دیگرِ همین مشکل): از lg به بعد
+          `h-auto` یعنی ارتفاع را به محتوا واگذار می‌کند؛ روی مانیتور خیلی
+          عریض (۳xl/۴xl) این محتوا آن‌قدر رشد نمی‌کند که با عرض واقعی صفحه
+          هم‌گام بماند. راه‌حل این‌جا باید روی خودِ `<section>` باشد (نه
+          این div که `absolute inset-0` است) — چون این div همیشه دقیقاً
+          هم‌اندازهٔ section والدش می‌شود؛ اگر section رشد نکند، هر
+          min-height روی این div به‌خاطر `overflow-hidden` روی section
+          هرز می‌رود (بریده می‌شود، هیچ اثری ندارد). */}
       <div className="absolute inset-x-0 top-0 -z-10 h-[560px] overflow-hidden sm:h-[460px] lg:inset-0 lg:h-auto">
         <ResponsivePhoto
           alt=""
           aria-hidden="true"
           className="size-full object-cover"
+          objectPosition="center 70%"
           mobile="/images/fleet-580-dusk-mobile.png"
           tablet="/images/fleet-580-dusk-tablet.png"
           desktop="/images/fleet-580-dusk.png"
