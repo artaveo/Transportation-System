@@ -3,6 +3,16 @@ import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
 /**
+ * ⚠️ وضعیت فعلی (۶ سپتامبر ۲۰۲۶، بخش ۱۲.۱۲ پرامپت مادر): این فایل فعلاً
+ * توسط هیچ لینک ایمیلی صدا زده نمی‌شود — چون بدون SMTP اختصاصی، قالب
+ * ایمیل «Reset Password» در پنل Supabase قابل‌ویرایش نیست (قفل روی قالب
+ * پیش‌فرض implicit-flow مانده) و account-forgot-password.tsx فعلاً
+ * مستقیم به /account/reset-password اشاره می‌کند، نه به اینجا. این فایل
+ * عمداً حذف نشده — دقیقاً همان چیزی است که بعد از وصل‌شدن SMTP (بدون هیچ
+ * تغییر کدی در همین فایل) دوباره فعال می‌شود؛ فقط دو جای دیگر باید عوض
+ * شوند: قالب ایمیل در پنل Supabase، و یک خط redirectTo در
+ * account-forgot-password.tsx. جزئیات کامل در بخش ۱۲.۱۲ پرامپت مادر.
+ *
  * فاز ۴.۷ — نقطهٔ مشترک تأیید لینک‌های ایمیلی Supabase Auth (PKCE flow).
  *
  * چرا این فایل لازم است: چون پروژه از @supabase/ssr با نشست کوکی‌محور

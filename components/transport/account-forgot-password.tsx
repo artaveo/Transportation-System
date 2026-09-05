@@ -36,7 +36,17 @@ export function AccountForgotPassword() {
     setSubmitting(true)
     try {
       const supabase = createClient()
-      const redirectTo = `${window.location.origin}/auth/confirm?type=recovery&next=/account/reset-password`
+      // موقت (تصمیم Zakir — ۶ سپتامبر ۲۰۲۶، بخش ۱۲.۱۲ پرامپت مادر): چون بدون
+      // SMTP اختصاصی، پنل Supabase اصلاً اجازهٔ ویرایش قالب ایمیل «Reset
+      // Password» را نمی‌دهد (باکس آبی «Set up custom SMTP to edit
+      // templates»)، فعلاً از قالب پیش‌فرض خودِ Supabase استفاده می‌شود که
+      // لینک implicit-flow می‌سازد (توکن‌ها در #hash خودِ redirectTo، نه در
+      // یک صفحهٔ واسط مثل /auth/confirm). به همین دلیل اینجا مستقیم به
+      // /account/reset-password اشاره می‌کند. وقتی SMTP وصل شد و قالب ایمیل
+      // به فرمت token_hash تغییر کرد، این خط باید به حالت قبلی برگردد:
+      // `${window.location.origin}/auth/confirm?type=recovery&next=/account/reset-password`
+      // — جزئیات کامل رفع در بخش ۱۲.۱۲ پرامپت مادر.
+      const redirectTo = `${window.location.origin}/account/reset-password`
       await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo })
     } finally {
       // عمداً بدون بررسی error از resetPasswordForEmail — طبق توضیح بالا،

@@ -13,12 +13,26 @@ import { SiteFooter } from "./site-footer"
 /**
  * فاز ۴.۷ — قدم دوم فلوی «فراموشی رمز عبور».
  *
- * این صفحه فقط زمانی کار می‌کند که کاربر از طریق app/auth/confirm/route.ts
- * (که token_hash داخل لینک ایمیل را verify کرده) به اینجا رسیده باشد —
- * یعنی از قبل یک نشست موقت «recovery» در کوکی‌هایش نشسته. اگر کسی مستقیم
- * این آدرس را باز کند (لینک قدیمی/دوباره‌استفاده‌شده)، هیچ نشستی وجود
- * ندارد و به‌جای فرم، پیام «لینک نامعتبر» با راه بازگشت نشان داده می‌شود —
- * نه یک فرم گمراه‌کننده که بعداً با خطای عمومی شکست می‌خورد.
+ * موقت (تصمیم Zakir — ۶ سپتامبر ۲۰۲۶، بخش ۱۲.۱۲ پرامپت مادر): چون فعلاً
+ * SMTP اختصاصی وصل نیست، از قالب پیش‌فرض ایمیل خودِ Supabase استفاده
+ * می‌شود که «implicit flow» است — یعنی به‌جای یک token_hash که سرور
+ * verify کند (app/auth/confirm/route.ts، که آماده مانده ولی فعلاً استفاده
+ * نمی‌شود)، خودِ لینک ایمیل مستقیماً به همین صفحه با access_token/
+ * refresh_token داخل #hash آدرس هدایت می‌کند. کتابخانهٔ @supabase/ssr در
+ * createClient (مرورگر) این #hash را خودکار می‌خواند و نشست را می‌سازد —
+ * اما این کار async است، پس هم یک‌بار getSession اولیه و هم گوش‌دادن به
+ * onAuthStateChange لازم است (دقیقاً همان الگوی site-header.tsx) تا رقابت
+ * زمانی (race) بین رندر اول و پردازش hash رخ ندهد. اگر کسی مستقیم و بدون
+ * لینک معتبر این آدرس را باز کند، هیچ نشستی ساخته نمی‌شود و پیام «لینک
+ * نامعتبر» به‌جای فرم نشان داده می‌شود.
+ *
+ * ⚠️ وقتی SMTP اختصاصی بعداً وصل شد: قالب ایمیل Reset Password باید به
+ * فرمت token_hash تغییر کند (بخش ۱۲.۱۲ پرامپت مادر برای HTML دقیق)، و
+ * redirectTo در account-forgot-password.tsx باید به
+ * `/auth/confirm?type=recovery&next=/account/reset-password` برگردد —
+ * بعد از آن، این کامپوننت هم می‌تواند به بررسی سادهٔ تک‌مرحله‌ای getSession
+ * برگردد (چون دیگر رقابت زمانی وجود ندارد، نشست از قبل توسط Route Handler
+ * ساخته شده)، هرچند نگه‌داشتن نسخهٔ فعلی (دو-مرحله‌ای) هم اشکالی ندارد.
  */
 export function AccountResetPassword() {
   const { lang } = useLang()
@@ -37,11 +51,42 @@ export function AccountResetPassword() {
 
   useEffect(() => {
     const supabase = createClient()
+    let active = true
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!active) return
       setHasSession(!!session)
       setCheckingSession(false)
     })
+
+    // implicit flow خواندن #hash را async انجام می‌دهد؛ اگر رندر اول زودتر
+    // از آن اجرا شود، این listener همان لحظه که نشست ساخته شد ما را باخبر
+    // می‌کند (رویداد "PASSWORD_RECOVERY" یا "SIGNED_IN").
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!active) return
+      if (session) {
+        setHasSession(true)
+        setCheckingSession(false)
+      }
+    })
+
+    return () => {
+      active = false
+      subscription.unsubscribe()
+    }
   }, [])
+
+  // نکتهٔ امنیتی implicit flow: توکن‌های نشست داخل #hash آدرس نشسته‌اند
+  // (قابل‌مشاهده در تاریخچهٔ مرورگر/نوار آدرس). بعد از اینکه نشست ساخته
+  // شد، آن‌ها را از URL پاک می‌کنیم — replaceState یعنی بدون رفرش صفحه و
+  // بدون افزودن رکورد جدید به تاریخچهٔ back/forward.
+  useEffect(() => {
+    if (hasSession && window.location.hash.includes("access_token")) {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search)
+    }
+  }, [hasSession])
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
