@@ -22,7 +22,7 @@ const fraunces = Fraunces({
 export const metadata: Metadata = {
   title: 'سفرِ شب‌رو | Shabraw — بلیت بس بین‌شهری افغانستان',
   description:
-    'رزرو آنلاین بلیت بس‌های بین‌شهری در کریدور کابل تا هرات — کابل، غزنی، قلات، کندهار، هلمند، نیمروز، فراه، هرات. Online intercity bus ticket booking on the Kabul-to-Herat corridor.',
+    'رزرو آنلاین بلیت بس‌های بین‌شهری در مسیر کابل تا هرات — کابل، غزنی، قلات، کندهار، هلمند، نیمروز، فراه، هرات. Online intercity bus ticket booking on the Kabul-to-Herat corridor.',
   generator: 'v0.app',
 }
 

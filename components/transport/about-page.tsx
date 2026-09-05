@@ -20,9 +20,13 @@ export function AboutPage() {
 
       {/* Intro — real corridor photo (mountain highway at dusk) as the
           background, same family of treatment as the homepage hero and the
-          fleet section's photo. Four device-tier crops (phase 4.6). */}
-      <section className="relative isolate overflow-hidden 3xl:min-h-[640px] 4xl:min-h-[860px]">
-        <div className="absolute inset-0 -z-10">
+          fleet section's photo. Four device-tier crops (phase 4.6).
+          فاز ۴.۶ (رفع نهایی/دقیق ردیف ۱۲.۸): باکس عکس دیگر با کل ارتفاع
+          section یکی نیست؛ فقط بالای section چسبیده و ارتفاعش را با
+          `aspect-[...]` دقیقاً هم‌نسبت فایل عکسِ همان بریک‌پوینت تعیین
+          می‌کند — برش صفر در هر عرضی (الگوی واقعی FlixBus.com). */}
+      <section className="relative isolate overflow-hidden">
+        <div className="absolute inset-x-0 top-0 -z-10 aspect-[1122/1402] md:aspect-[1448/1086] lg:aspect-[1672/941] 3xl:aspect-[1915/821]">
           <ResponsivePhoto
             alt=""
             aria-hidden="true"

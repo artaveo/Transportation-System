@@ -34,7 +34,7 @@ export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] 
     "w-full rounded-xl border border-border bg-background/60 py-3 text-foreground transition-colors focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
 
   return (
-    <section className="relative isolate 3xl:min-h-[640px] 4xl:min-h-[860px]">
+    <section className="relative isolate">
       {/* Dusk sky atmospheric anchor. Mobile + desktop crops are the real
           hero photos (phase 4.6). tablet/wide crops below are TEMPORARY —
           they reuse about-page's corridor-dusk images (which happen to be
@@ -47,8 +47,19 @@ export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] 
           درباره‌ما (`about-corridor-dusk-tablet.png` / `-wide.png`) که
           دقیقاً هم‌ابعاد نسخهٔ موبایل/دسکتاپ هیرو هستند استفاده شد. باید
           هر وقت عکس واقعی هیرو برای این دو ردهٔ دیگر ساخته شد (تصمیم
-          Zakir)، این دو خط جایگزین شوند. */}
-      <div className="absolute inset-0 -z-10">
+          Zakir)، این دو خط جایگزین شوند.
+
+          فاز ۴.۶ (رفع نهایی/دقیق ردیف ۱۲.۸ — جایگزین راه‌حل تقریبی
+          min-height قبلی): این باکس دیگر با کل ارتفاع section (که با
+          محتوای متن/فرم تعیین می‌شود) یکی نیست؛ فقط به بالای section
+          چسبیده (`inset-x-0 top-0`) و ارتفاعش را خودش، دقیقاً هم‌نسبت
+          فایل عکسی که ResponsivePhoto در همان بریک‌پوینت نشان می‌دهد،
+          با `aspect-[...]` تعیین می‌کند — یعنی برش صفر، در هر عرضی، نه
+          فقط در دو نقطهٔ ۳xl/۴xl (دقیقاً همان الگویی که FlixBus.com واقعاً
+          استفاده می‌کند: عکس یک نوار با نسبت ثابت است، محتوا/فرم اگر
+          بلندتر باشد زیرِ آن، روی پس‌زمینهٔ صاف که گرادیان به آن محو
+          می‌شود، ادامه پیدا می‌کند — نه اینکه چیزی از عکس بریده شود). */}
+      <div className="absolute inset-x-0 top-0 -z-10 aspect-[1122/1402] md:aspect-[1448/1086] lg:aspect-[1672/941] 3xl:aspect-[1915/821]">
         <ResponsivePhoto
           alt=""
           aria-hidden="true"

@@ -21,8 +21,7 @@ export const dictionary = {
     hero: {
       kicker: "حمل و نقل بین‌شهری افغانستان",
       title: "سفری آرام از دلِ کوه‌ها، از شهری به شهر دیگر",
-      subtitle:
-        "بلیت بس‌های بزرگ بین‌شهری را آنلاین و در چند لحظه رزرو کنید. مسیر منظم کابل تا هرات، با توقف در غزنی، قلات، کندهار، هلمند، نیمروز و فراه.",
+      subtitle: "رزرو آنلاین بلیت بس‌های بزرگ بین‌شهری، در مسیر کابل تا هرات.",
       origin: "مبدأ",
       originPlaceholder: "شهر مبدأ را انتخاب کنید",
       destination: "مقصد",
@@ -32,12 +31,11 @@ export const dictionary = {
       passenger: "مسافر",
       search: "جست‌وجوی سفر",
       swap: "جابه‌جایی مبدأ و مقصد",
-      helper:
-        "برای دیدن نوع بس، شمارهٔ چوکی خالی، ساعت دقیق حرکت و قیمت هر سرویس، لطفاً مبدأ، مقصد و تاریخ سفر خود را مشخص کنید.",
+      helper: "با انتخاب مسیر و تاریخ، نوع بس، چوکی خالی و قیمت را می‌بینید.",
     },
     routes: {
       title: "مسیرهای پرطرفدار",
-      subtitle: "پرترددترین خطوط ما در کریدور جنوب‌غربی",
+      subtitle: "پرترددترین خطوط ما در مسیر جنوب‌غربی",
       from: "از",
       to: "به",
       duration: "مدت سفر",
@@ -86,7 +84,7 @@ export const dictionary = {
       kicker: "قیمت‌ها و زمان‌بندی",
       title: "مسیرها و قیمت‌ها",
       subtitle:
-        "فهرست کامل مسیرهای فعال ما در کریدور کابل تا هرات، همراه با مدت سفر؛ برای رزرو، مسیر موردنظر را جست‌وجو کنید.",
+        "فهرست کامل مسیرهای فعال ما از کابل تا هرات، همراه با مدت سفر؛ برای رزرو، مسیر موردنظر را جست‌وجو کنید.",
       filterLabel: "استان مبدأ یا مقصد",
       filterAll: "همهٔ مسیرها",
       colFrom: "از",
@@ -123,7 +121,7 @@ export const dictionary = {
     whyUs: {
       kicker: "چرا سفرِ شب‌رو",
       title: "چرا ما را انتخاب کنید",
-      subtitle: "دلایلی که مسافران کریدور کابل تا هرات به ما اعتماد می‌کنند.",
+      subtitle: "دلایلی که مسافران مسیر کابل تا هرات به ما اعتماد می‌کنند.",
       items: [
         {
           title: "رزرو بدون حساب کاربری",
@@ -161,7 +159,7 @@ export const dictionary = {
     destinationsSection: {
       kicker: "شبکهٔ سفر",
       title: "مقصدهای تحت پوشش",
-      subtitle: "کریدور اصلی ما شهرهای زیر را از کابل تا هرات به هم وصل می‌کند.",
+      subtitle: "مسیر اصلی ما شهرهای زیر را از کابل تا هرات به هم وصل می‌کند.",
       viewSchedule: "مشاهدهٔ زمان‌بندی",
       corridorNote: "همهٔ این شهرها روی یک خط اصلی قرار دارند؛ رزرو میان هر دو نقطه از این مسیر ممکن است.",
     },
@@ -357,7 +355,7 @@ export const dictionary = {
       kicker: "دربارهٔ ما",
       title: "شبکه‌ای که کابل را به هرات وصل می‌کند",
       intro:
-        "«سفرِ شب‌رو» مسافران را در کریدور جنوب‌غربی افغانستان — از کابل تا هرات، با توقف در غزنی، قلات، کندهار، هلمند، نیمروز و فراه — جابه‌جا می‌کند؛ با ناوگانی از کوچ‌های بزرگ بین‌شهری و برنامهٔ حرکت منظم.",
+        "«سفرِ شب‌رو» مسافران را در مسیر جنوب‌غربی افغانستان — از کابل تا هرات، با توقف در غزنی، قلات، کندهار، هلمند، نیمروز و فراه — جابه‌جا می‌کند؛ با ناوگانی از کوچ‌های بزرگ بین‌شهری و برنامهٔ حرکت منظم.",
       stats: [
         { label: "سال سابقهٔ فعالیت" },
         { label: "شهر تحت پوشش" },
@@ -367,7 +365,7 @@ export const dictionary = {
       statsPlaceholderNote: "[PLACEHOLDER] این آمار پس از دریافت اعداد واقعی از شرکت تکمیل می‌شود.",
       storyTitle: "داستان ما",
       storyBody:
-        "شبکهٔ ما یک کریدور واحد را پوشش می‌دهد: کابل، غزنی، قلات، کندهار، هلمند، نیمروز، فراه و هرات. مسافران می‌توانند میان هر دو نقطه از این مسیر رزرو کنند.",
+        "شبکهٔ ما یک مسیر واحد را پوشش می‌دهد: کابل، غزنی، قلات، کندهار، هلمند، نیمروز، فراه و هرات. مسافران می‌توانند میان هر دو نقطه از این مسیر رزرو کنند.",
       safetyTitle: "تعهد به ایمنی و کیفیت",
       safetyBody:
         "هر سفر با بس‌های مدل «۵۸۰» (Mercedes-Benz Travego/O580) انجام می‌شود که برای سفرهای طولانی بین‌شهری ساخته شده‌اند. بازرسی فنی پیش از حرکت و رعایت برنامهٔ زمانی از اولویت‌های ماست.",
@@ -389,7 +387,7 @@ export const dictionary = {
       officesTitle: "دفاتر فروش",
       hours: "هر روز، ۶ صبح تا ۱۰ شب",
       hoursNote: "[PLACEHOLDER — ساعت کاری هر دفتر باید جداگانه تأیید شود]",
-      mapTitle: "نقشهٔ کریدور",
+      mapTitle: "نقشهٔ مسیر",
       mapNote: "این نقشه، ترتیب جغرافیایی شهرهای تحت پوشش را نشان می‌دهد؛ نقشهٔ دقیق دفاتر پس از دریافت آدرس‌ها اضافه می‌شود.",
       formTitle: "ارسال پیام",
       formName: "نام شما",
@@ -680,8 +678,7 @@ export const dictionary = {
     hero: {
       kicker: "Intercity transport across Afghanistan",
       title: "A calm journey through the mountains, from one city to the next",
-      subtitle:
-        "Book seats on large intercity coaches online in moments. A regular corridor from Kabul to Herat, stopping in Ghazni, Qalat, Kandahar, Helmand, Nimroz, and Farah.",
+      subtitle: "Book online tickets for large intercity coaches, on the Kabul–Herat corridor.",
       origin: "From",
       originPlaceholder: "Select departure city",
       destination: "To",
@@ -691,8 +688,7 @@ export const dictionary = {
       passenger: "passenger",
       search: "Search trips",
       swap: "Swap origin and destination",
-      helper:
-        "To see bus type, available seat numbers, exact departure time, and price for each trip, please choose your origin, destination, and travel date.",
+      helper: "Choose a route and date to see bus type, seats, and price.",
     },
     routes: {
       title: "Popular routes",
