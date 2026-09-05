@@ -42,7 +42,7 @@ export function AboutPage() {
             <span className="h-px w-8 bg-primary" aria-hidden="true" />
           </p>
           <h1
-            className={`text-balance ${displayFont(lang)} animate-rise-in text-4xl font-semibold leading-[1.1] tracking-tight text-foreground drop-shadow-sm sm:text-5xl`}
+            className={`break-words ${displayFont(lang)} animate-rise-in text-4xl font-semibold leading-[1.1] tracking-tight text-foreground drop-shadow-sm sm:text-5xl`}
             style={{ animationDelay: "80ms" }}
           >
             {t.about.title}
@@ -107,7 +107,7 @@ export function AboutPage() {
       <section className="py-16 sm:py-24">
         <div className="mx-auto max-w-5xl px-5 sm:px-8">
           <div className="mx-auto mb-10 max-w-2xl text-center">
-            <h2 className={`text-balance ${displayFont(lang)} text-3xl font-semibold tracking-tight text-foreground sm:text-4xl`}>
+            <h2 className={`break-words ${displayFont(lang)} text-3xl font-semibold tracking-tight text-foreground sm:text-4xl`}>
               {t.about.busTypesTitle}
             </h2>
             <p className="mt-3 text-pretty leading-relaxed text-muted-foreground">{t.about.busTypesIntro}</p>

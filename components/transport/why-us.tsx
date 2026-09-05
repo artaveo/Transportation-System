@@ -25,7 +25,7 @@ export function WhyUs({ lang }: { lang: Lang }) {
             {t.whyUs.kicker}
             <span className="h-px w-8 bg-primary" aria-hidden="true" />
           </p>
-          <h2 className={`text-balance ${displayFont(lang)} text-3xl font-semibold tracking-tight text-foreground sm:text-4xl`}>
+          <h2 className={`break-words ${displayFont(lang)} text-3xl font-semibold tracking-tight text-foreground sm:text-4xl`}>
             {t.whyUs.title}
           </h2>
           <p className="mt-3 text-pretty leading-relaxed text-muted-foreground">{t.whyUs.subtitle}</p>

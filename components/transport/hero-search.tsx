@@ -56,7 +56,7 @@ export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] 
             <span className="h-px w-8 bg-primary" aria-hidden="true" />
             {t.hero.kicker}
           </p>
-          <h1 className={`text-balance ${displayFont(lang)} text-4xl font-semibold leading-[1.1] tracking-tight text-foreground sm:text-5xl lg:text-6xl`}>
+          <h1 className={`break-words ${displayFont(lang)} text-4xl font-semibold leading-[1.1] tracking-tight text-foreground sm:text-5xl lg:text-6xl`}>
             {t.hero.title}
           </h1>
           <p className="mt-5 max-w-xl text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
