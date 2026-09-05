@@ -53,6 +53,7 @@ export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] 
           alt=""
           aria-hidden="true"
           className="size-full object-cover"
+          priority
           mobile="/images/hero-road-dusk-mobile.png"
           tablet="/images/about-corridor-dusk-tablet.png"
           desktop="/images/hero-road-dusk.png"

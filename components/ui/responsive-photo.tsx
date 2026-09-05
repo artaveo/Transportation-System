@@ -1,3 +1,5 @@
+import { getImageProps } from "next/image"
+
 /**
  * Shared responsive photo primitive (Phase 4.6 — master prompt section 8.2).
  *
@@ -17,6 +19,19 @@
  * update later beyond adding the missing tier props once those crops exist.
  * This is the one shared pattern meant for every image on the site, not a
  * one-off for hero/fleet/about.
+ *
+ * درخواست Zakir (فاز ۴.۶ — سرعت روی اینترنت ضعیف): هر srcSet اینجا دیگر
+ * مستقیم به فایل PNG اصلی (۱.۵-۲ مگابایتی) اشاره نمی‌کند؛ با getImageProps
+ * از next/image ساخته می‌شود، یعنی از همان پایپ‌لاین رسمی بهینه‌سازی
+ * Next.js/Vercel رد می‌شود — resize خودکار به چند اندازه + تبدیل به فرمت
+ * مدرن (WebP/AVIF بسته به مرورگر کاربر)، بدون افت محسوس کیفیت (quality
+ * پیش‌فرض اینجا ۸۲، کمی بالاتر از پیش‌فرض خودِ Next یعنی ۷۵، عمداً برای
+ * اطمینان بیشتر از حفظ کیفیت روی عکس‌های اتمسفریک هیرو/ناوگان).
+ * این تغییر ریشه‌ای است: چون در سطح همین کامپوننت مشترک اعمال شده، هر عکس
+ * دیگری — امروز یا در آینده (مثلاً عکس‌هایی که پنل ادمین در فازهای بعدی از
+ * Supabase Storage آپلود/لینک می‌کند) — تا وقتی از همین کامپوننت (یا
+ * next/image به‌طور مستقیم) رندر شود، خودکار از همین بهینه‌سازی برخوردار
+ * می‌شود؛ نیازی به فشرده‌سازی دستی قبل از آپلود نیست.
  */
 export interface ResponsivePhotoProps {
   /** Accessible alt text. Use "" for purely decorative/background photos. */
@@ -31,6 +46,29 @@ export interface ResponsivePhotoProps {
   /** Optional — wide/ultra-wide monitors, roughly >= 1600px. */
   wide?: string
   "aria-hidden"?: boolean | "true" | "false"
+  /**
+   * Only for a photo that's visible immediately on load (typically the
+   * hero) — skips lazy-loading and asks the browser to fetch it with high
+   * priority, since it's usually the page's LCP element.
+   */
+  priority?: boolean
+}
+
+// عمداً کمی بالاتر از پیش‌فرض ۷۵ خودِ Next.js — این عکس‌ها اتمسفریک/تمام‌عرض
+// هستند و فشرده‌سازی بیش‌ازحد روی گرادیان‌های آسمان غروب مصنوعی می‌تواند
+// banding ایجاد کند؛ باید در next.config.mjs (images.qualities) هم مجاز
+// باشد.
+const QUALITY = 82
+
+function opt(src: string, priority?: boolean) {
+  return getImageProps({
+    src,
+    alt: "",
+    fill: true,
+    sizes: "100vw",
+    quality: QUALITY,
+    priority,
+  }).props
 }
 
 export function ResponsivePhoto({
@@ -40,14 +78,26 @@ export function ResponsivePhoto({
   mobile,
   tablet,
   wide,
+  priority,
   ...rest
 }: ResponsivePhotoProps) {
+  const desktopImg = opt(desktop, priority)
+  const mobileImg = opt(mobile ?? desktop, priority)
+  const tabletImg = tablet ? opt(tablet, priority) : null
+  const wideImg = wide ? opt(wide, priority) : null
+
   return (
     <picture>
-      {wide && <source media="(min-width: 1600px)" srcSet={wide} />}
-      <source media="(min-width: 1024px)" srcSet={desktop} />
-      {tablet && <source media="(min-width: 768px)" srcSet={tablet} />}
-      <img src={mobile ?? desktop} alt={alt} className={className} {...rest} />
+      {wideImg && <source media="(min-width: 1600px)" srcSet={wideImg.srcSet} />}
+      <source media="(min-width: 1024px)" srcSet={desktopImg.srcSet} />
+      {tabletImg && <source media="(min-width: 768px)" srcSet={tabletImg.srcSet} />}
+      <img
+        {...mobileImg}
+        src={mobileImg.src}
+        alt={alt}
+        className={className}
+        {...rest}
+      />
     </picture>
   )
 }

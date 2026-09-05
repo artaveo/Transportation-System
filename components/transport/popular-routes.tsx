@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { ArrowLeft, ArrowRight, Clock } from "lucide-react"
 import type { Lang } from "@/lib/i18n"
 import { cities, dictionary, displayFont, localizeNumber, popularRoutes } from "@/lib/i18n"
@@ -30,10 +31,13 @@ export function PopularRoutes({ lang }: { lang: Lang }) {
               style={{ borderTopColor: r.accent, borderTopWidth: 3 }}
             >
               <div className="relative h-40 overflow-hidden">
-                <img
+                <Image
                   src={r.image || "/placeholder.svg"}
                   alt={r.to[lang]}
-                  className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  fill
+                  sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+                  quality={82}
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-card via-card/30 to-transparent" />
                 <span
