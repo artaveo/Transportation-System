@@ -351,6 +351,7 @@ export type Database = {
       customers: {
         Row: {
           auth_user_id: string | null
+          avatar_url: string | null
           created_at: string
           email: string | null
           full_name: string | null
@@ -366,6 +367,7 @@ export type Database = {
         }
         Insert: {
           auth_user_id?: string | null
+          avatar_url?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -381,6 +383,7 @@ export type Database = {
         }
         Update: {
           auth_user_id?: string | null
+          avatar_url?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
@@ -818,6 +821,12 @@ export type Database = {
           status: Database["public"]["Enums"]["seat_status"]
           trip_id: string
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "trip_seats"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       is_admin: { Args: never; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
@@ -838,6 +847,7 @@ export type Database = {
         }
         Returns: {
           auth_user_id: string | null
+          avatar_url: string | null
           created_at: string
           email: string | null
           full_name: string | null
@@ -850,6 +860,12 @@ export type Database = {
           referred_by_customer_id: string | null
           updated_at: string
           wallet_balance: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "customers"
+          isOneToOne: true
+          isSetofReturn: false
         }
       }
       update_booking_contact_phone: {

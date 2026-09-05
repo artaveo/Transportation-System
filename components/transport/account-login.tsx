@@ -110,9 +110,14 @@ export function AccountLogin() {
               {errors.email && <p className="mt-1 text-xs text-destructive">{t.account.required}</p>}
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                {t.account.passwordLabel}
-              </label>
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <label className="block text-xs font-medium text-muted-foreground">
+                  {t.account.passwordLabel}
+                </label>
+                <Link href="/account/forgot-password" className="text-xs font-medium text-primary hover:underline">
+                  {t.account.forgotPasswordLink}
+                </Link>
+              </div>
               <input
                 dir="ltr"
                 type="password"

@@ -1,17 +1,62 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Bus, Menu, X } from "lucide-react"
 import { dictionary, displayFont } from "@/lib/i18n"
 import { useLang } from "@/lib/lang-context"
+import { createClient } from "@/lib/supabase/client"
+import { CustomerAvatar } from "../ui/customer-avatar"
+
+type HeaderCustomer = { full_name: string | null; avatar_url: string | null } | null
 
 export function SiteHeader() {
   const { lang, toggle } = useLang()
   const t = dictionary[lang]
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
+
+  // فاز ۴.۷ — تشخیص نشست سمت کلاینت برای تعویض دکمهٔ «ورود» با آواتار
+  // مسافر واردشده (درخواست Zakir، طرح از اسکرین‌شات FlixBus). undefined
+  // یعنی «هنوز مشخص نشده» (رندر اول، جلوگیری از فلش نادرست به حالت مهمان)؛
+  // null یعنی مهمان؛ آبجکت یعنی مسافر واردشده. SELECT از customers طبق
+  // policy «customers_self_select» (بخش ۳.۲ RLS) برای کلاینت مرورگر مجاز
+  // است — نیازی به service_role یا Route Handler جداگانه نیست.
+  const [customer, setCustomer] = useState<HeaderCustomer | undefined>(undefined)
+
+  useEffect(() => {
+    const supabase = createClient()
+    let active = true
+
+    async function loadCustomer(userId: string | null) {
+      if (!userId) {
+        if (active) setCustomer(null)
+        return
+      }
+      const { data } = await supabase
+        .from("customers")
+        .select("full_name, avatar_url")
+        .eq("auth_user_id", userId)
+        .maybeSingle()
+      if (active) setCustomer(data ?? null)
+    }
+
+    supabase.auth.getUser().then(({ data: { user } }) => loadCustomer(user?.id ?? null))
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      loadCustomer(session?.user?.id ?? null)
+    })
+
+    return () => {
+      active = false
+      subscription.unsubscribe()
+    }
+  }, [])
+
+  const accountLabel = customer ? customer.full_name?.trim().split(" ")[0] || t.account.dashboardTitle : t.login
 
   // Each label now matches exactly one real page's own title — the old
   // list had "Fleet" and "Offices" pointing at the About and Contact pages
@@ -71,11 +116,19 @@ export function SiteHeader() {
           >
             {t.langButton}
           </button>
+          {/* فاز ۴.۷ — قبلاً یک دکمهٔ متنی ساده («ورود») بود؛ حالا مثل
+              اسکرین‌شات FlixBus یک آیکن پروفایل دایره‌ای + متن است. برای
+              مهمان همان آیکن سایه‌ای عمومی (CustomerAvatar بدون avatarUrl)
+              نمایش داده می‌شود؛ برای مسافر واردشده نام کوچکش. هر وقت
+              customers.avatar_url مقدار بگیرد (فیچر آپلود، فازی بعدی)،
+              همینجا بدون هیچ تغییر کدی عکس واقعی جای آیکن را می‌گیرد. */}
           <Link
             href="/account"
-            className="hidden rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:inline-flex"
+            className="hidden items-center gap-2 rounded-full border border-border py-1 pe-3.5 ps-1 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:inline-flex"
+            aria-label={customer ? t.account.dashboardTitle : t.login}
           >
-            {t.login}
+            <CustomerAvatar name={customer?.full_name} avatarUrl={customer?.avatar_url} size={26} />
+            <span>{accountLabel}</span>
           </Link>
           <button
             onClick={() => setOpen((v) => !v)}
@@ -112,9 +165,10 @@ export function SiteHeader() {
               <Link
                 href="/account"
                 onClick={() => setOpen(false)}
-                className="mt-1 block rounded-lg bg-primary px-3 py-2.5 text-center text-sm font-semibold text-primary-foreground"
+                className="mt-1 flex items-center justify-center gap-2 rounded-lg bg-primary px-3 py-2.5 text-sm font-semibold text-primary-foreground"
               >
-                {t.login}
+                <CustomerAvatar name={customer?.full_name} avatarUrl={customer?.avatar_url} size={22} />
+                {accountLabel}
               </Link>
             </li>
           </ul>

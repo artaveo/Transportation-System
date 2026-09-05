@@ -7,7 +7,20 @@ const ACCOUNT_LOGIN_PATH = "/account/login"
 // "/account/complete-profile" عمداً اینجا نیست: نیاز به نشست دارد (auth.uid()
 // در signup_customer)، اما نیازی به داشتن رکورد customers از قبل ندارد —
 // خودِ آن تشخیص را صفحه انجام می‌دهد، نه middleware.
-const ACCOUNT_PUBLIC_PATHS = new Set([ACCOUNT_LOGIN_PATH, "/account/signup"])
+// فاز ۴.۷: "/account/forgot-password" هم به همین گروه اضافه شد — دقیقاً
+// همان رفتار login/signup را می‌خواهد (بدون نشست باز است؛ با نشست به
+// داشبورد هدایت می‌شود، چون یک مسافرِ واردشده نیازی به این فرم ندارد).
+const ACCOUNT_PUBLIC_PATHS = new Set([ACCOUNT_LOGIN_PATH, "/account/signup", "/account/forgot-password"])
+
+// فاز ۴.۷: "/account/reset-password" یک حالت سوم است — نه کاملاً عمومی
+// (نباید بدون نشست باز شود، چون updateUser به نشست نیاز دارد) و نه مثل
+// بقیهٔ صفحات /account (نباید فقط چون نشست دارد به داشبورد ریدایرکت شود،
+// چون خودِ همین صفحه ممکن است تنها جایی باشد که کاربر همین الان با یک
+// نشست موقتِ «recovery» به آن رسیده). پس این یک مسیر را middleware کاملاً
+// دست‌نخورده رد می‌کند — تشخیص «نشست دارد یا نه» را خودِ کامپوننت کلاینت
+// (AccountResetPassword، با getSession) انجام می‌دهد و پیام مناسب
+// («لینک نامعتبر» در برابر فرم واقعی) را نشان می‌دهد.
+const ACCOUNT_SESSION_OPTIONAL_PATH = "/account/reset-password"
 
 /**
  * فاز ۳.۳ (پنل ادمین) + فاز ۴.۵ (حساب مسافر) — یک middleware مشترک.
@@ -76,6 +89,10 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname.startsWith("/account")) {
+    if (pathname === ACCOUNT_SESSION_OPTIONAL_PATH) {
+      return response
+    }
+
     const isPublicAccountPage = ACCOUNT_PUBLIC_PATHS.has(pathname)
 
     if (!user) {
