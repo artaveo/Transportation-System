@@ -122,6 +122,12 @@ Phase 5.7     Operational trip lifecycle                  ✅
 Phase 5.8     Booking-table operational columns           ✅
 ```
 
+جزئیات کامل پیاده‌سازی هر یک از فازهای تکمیل‌شده (فایل‌های تغییریافته،
+تصمیمات فنی، اعتبارسنجی، بدهی باقی‌مانده) در سند مستقل همان فاز ثبت
+شده است: `PHASE-3.3-README.md`، `PHASE-4_1` تا `PHASE-4_5-README.md`،
+و `PHASE-5_1` تا `PHASE-5_8-README.md`. این سند (`ROAD-MAP.md`) عمداً
+فقط وضعیت را نگه می‌دارد، نه جزئیات را — طبق بخش ۱۳.
+
 ---
 
 # 6. Debt تاریخی / افزوده‌شده پس از audit
@@ -157,6 +163,21 @@ Phase 5.8     Booking-table operational columns           ✅
 - استفاده فقط از مقصدهای فعال در سمت عمومی
 - audit و validation
 
+**زمینهٔ آماده:** جدول `cities` از فاز ۳.۱ ستون `is_active` دارد ولی
+فقط ۸ شهر کریدور فعلی seed شده‌اند؛ ۲۶ ولایت دیگر اصلاً رکورد ندارند
+(نه این‌که غیرفعال باشند).
+
+**کار لازم:**
+1. migration برای افزودن ۲۶ ولایت باقی‌ماندهٔ افغانستان به `cities` با
+   `is_active=false` (نام دری+انگلیسی رسمی هرکدام را قبل از insert
+   تأیید کن، طبق قانون عدم جعل اطلاعات).
+2. دراپ‌داون انتخاب شهر در فرم مسیر ادمین (`RouteManager`) باید هر ۳۴
+   شهر را نشان دهد (با تگ «غیرفعال» برای inactive)، چون سرچ عمومی
+   مشتری از قبل درست فقط شهرهای `is_active` را نشان می‌دهد.
+3. یک کنترل ادمین (تیک/سوییچ) برای toggle کردن `is_active` هر شهر —
+   بدون نیاز به SQL دستی — که همان لحظه هم روی فرم مسیر ادمین هم روی
+   سرچ صفحهٔ اصلی مشتری اثر بگذارد.
+
 **Requires stakeholder confirmation:** فهرست canonical شهرها و نام‌های نمایشی.
 
 ## Phase 5.10 — گزارش‌گیری و retention
@@ -167,6 +188,16 @@ Phase 5.8     Booking-table operational columns           ✅
 - export امن
 - سازگاری گزارش‌ها با منطق مالی آینده
 
+**زمینهٔ آماده:** دکمه‌های ۷/۳۰/۹۰ روز در `ReportsDashboard` (فاز ۵.۳)
+فقط shortcut هستند؛ فیلدهای «از تاریخ»/«تا تاریخ» بدون `min` مستقیم
+روی bookings/trips واقعی کوئری می‌زنند و هیچ داده‌ای حذف/آرشیو نمی‌شود.
+
+**کار لازم:**
+1. یک دکمهٔ چهارم «همهٔ بازه‌ها» (از قدیمی‌ترین رزرو تا امروز) که این
+   قابلیت پنهان را بارزتر کند.
+2. یک بند کوتاه دربارهٔ سیاست نگهداری/بکاپ داده برای فاز مربوط به
+   Production Deployment (چیزی در کد لازم نیست، فقط تصمیم مکتوب).
+
 ## Phase 5.11 — Coupon پیشرفته
 
 - rule composition
@@ -176,6 +207,18 @@ Phase 5.8     Booking-table operational columns           ✅
 - conflict handling
 - auditability
 
+**زمینهٔ آماده:** جدول `coupons` فعلی (فاز ۵.۴) فقط دارد: کد/نوع
+تخفیف/مقدار/قابل‌جمع‌شدن با سطح/سقف کلی استفاده/بازهٔ تاریخی/فعال‌بودن.
+گپ‌های شناسایی‌شده: بدون محدودیت حداقل سطح عضویت، بدون سقف به‌ازای هر
+مشتری (فقط سقف کلی)، بدون محدودیت به مسیر خاص، بدون فلگ «فقط اولین
+سفر»، بدون حداقل مبلغ/تعداد صندلی، بدون فلگ «فقط مشتری ثبت‌نامی».
+
+**کار لازم:** افزودن ستون‌های `min_loyalty_tier_id`،
+`per_customer_limit`، `applicable_route_ids`، `first_trip_only`،
+`min_seats`/`min_amount`، `guest_allowed` به `coupons` + به‌روزرسانی
+منطق اعتبارسنجی کوپن در `confirm_booking()` برای چک هرکدام + فرم CRUD
+کوپن در `LoyaltyManager` برای این فیلدهای تازه.
+
 ## Phase 5.12 — Limited Admin و Permission Center
 
 - section-level permissions
@@ -183,6 +226,21 @@ Phase 5.8     Booking-table operational columns           ✅
 - server enforcement
 - UI visibility مطابق permission
 - audit تغییرات دسترسی
+
+**زمینهٔ آماده:** پایهٔ کامل از فاز ۳.۱/۳.۲ در دیتابیس هست: جدول
+`admins` ستون `role` (`super_admin`/`limited_admin`) و
+`allowed_sections text[]` دارد، تابع RLS کمکی `has_admin_section()` از
+قبل روی چند جدول (routes/fleet/trips/bookings/payments/loyalty/customers)
+فعال است. **چیزی که نیست:** هیچ UI برای ساختن/مدیریت ادمین محدود (فقط
+یک super_admin با اسکریپت SQL دستی بوت‌استرپ شده — فاز ۳.۳)، middleware
+فقط `is_admin()` عمومی چک می‌کند نه بخش‌های مجاز، sidebar
+(`admin-panel.tsx`) همیشه هر ۸ تب را بدون فیلتر نشان می‌دهد.
+
+**کار لازم:** تب «مدیریت ادمین‌ها» (فقط برای super_admin، با
+`is_super_admin()` گیت شود) + فیلترکردن `navItems` در `admin-panel.tsx`
+بر اساس `allowed_sections` ادمین لاگین‌شده + تصمیم دربارهٔ روش ساخت
+حساب Auth برای ادمین جدید (دعوت دستی از Supabase Dashboard مثل
+بوت‌استرپ اولیه، یا Admin API).
 
 ## Phase 5.13 — Public CMS Lite
 
@@ -193,6 +251,18 @@ Phase 5.8     Booking-table operational columns           ✅
 - versioning پایه
 - fallback content strategy
 - جلوگیری از arbitrary HTML به‌عنوان مدل محتوا
+
+**زمینهٔ آماده:** هیچ‌کدام از این‌ها دیتابیسی نیستند؛ متن هیرو/آدرس
+تماس/توضیحات درباره‌ما همه هاردکد در `lib/i18n.ts`اند، عکس‌ها فایل
+استاتیک در `public/`.
+
+**کار لازم (قبل از شروع کد، با Zakir تأیید شود):** فهرست دقیق کدام
+فیلدها واقعاً قابل‌ویرایش باشند (پیشنهاد اولیه: آدرس/تلفن/ساعت‌کاری/
+عکس‌های هیرو-ناوگان-درباره‌ما — نه کل ساختار صفحه)؛ سپس یک جدول
+key-value تازه (`site_settings`: key, value_fa, value_en) + یک
+Supabase Storage bucket برای آپلود عکس + یک تب ادمین ساده برای ویرایش،
+و صفحات پابلیک مربوطه باید مقدار دیتابیسی را (اگر موجود بود) به‌جای
+مقدار ثابت i18n بخوانند.
 
 ---
 
