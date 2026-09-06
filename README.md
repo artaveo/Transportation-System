@@ -2,103 +2,100 @@
 
 ## سامانه رزرو و مدیریت سفرهای بین‌شهری
 
-A production-oriented full-stack booking and transport operations platform for intercity bus companies in Afghanistan.
+A production-oriented full-stack transport platform for intercity bus companies in Afghanistan.
 
-Transportation System is designed around a real-world bus business workflow: route management, trip scheduling, large-bus seat inventory, passenger booking, payment states, booking tracking, customer accounts, loyalty, reporting, and operational administration.
+The project is no longer treated as a simple ticket-booking website. Its target architecture combines passenger commerce, transport operations, and business control in one system that can evolve toward a larger transport software platform.
 
-The system is initially intended for a single transport company, while its domain model and service boundaries are structured so the platform can evolve toward a multi-company transport ecosystem without a foundational rewrite.
-
-> **Current status — September 6, 2026:** Feature development has reached **Phase 5.8**. The system already has live Supabase-backed public booking flows and a real operational admin panel. Production hardening, payment gateway integration, SMS, advanced administrative controls, QA/security, observability, and final deployment remain on the roadmap.
+> **Current status — September 6, 2026:** Phase **5.8** is complete and Phase **5.9** is the next planned implementation step. The public booking platform and database-backed operational admin are functional. Payment integration, messaging, stronger authorization, automated quality gates, observability, recovery, and broader transport-operations capabilities remain on the roadmap.
 
 ---
 
 ## Product Scope
 
-The platform is intentionally more than a marketing website. It combines two connected products:
-
 ### Passenger Platform
 
-- Search trips by origin, destination, and date
-- Real trip availability from Supabase
+- Search intercity trips by origin, destination, and date
+- Live trip and seat availability from Supabase
 - Large-bus seat map and seat selection
-- Atomic temporary seat holding to protect against double booking
-- Passenger information collection
-- Guest checkout without requiring an account
-- Registered passenger accounts
-- Loyalty tiers and referral architecture
-- Booking confirmation and digital booking reference
+- Server/database-controlled seat holding and booking confirmation
+- Guest checkout
+- Passenger accounts and profile management
+- Booking confirmation and booking reference
 - Booking lookup and tracking
-- Contact information updates where permitted
-- Booking cancellation/request-cancellation flows
-- Online and offline payment states
-- Responsive experience across phones, tablets, laptops, desktops, wide and ultra-wide monitors
-- RTL/LTR-ready localization architecture
+- Cancellation/request-cancellation flows
+- Loyalty and referral foundation
+- Coupon support
+- Online/offline payment states
+- Responsive mobile, tablet, desktop, wide-screen, and ultra-wide experience
+- RTL/LTR-ready localization foundation
 
 ### Transport Operations Platform
 
 - Operational dashboard
-- Route CRUD
-- Bus/fleet CRUD
-- Driver CRUD
-- Trip scheduling and editing
+- Route, bus, driver, and trip management
 - Trip lifecycle management
-- Boarding/departure/completion/cancellation states
-- Operational timestamps for departure and arrival
-- Booking management
+- Seat inventory generation
+- Booking administration
 - Offline-payment confirmation
-- Booking cancellation actions
-- Seat-number visibility inside booking management
-- Revenue, passenger, occupancy, and trip reports
-- CSV reporting/export
-- Loyalty-tier administration
-- Referral reward management
-- Coupon management
-- Responsive mobile admin navigation and wide-table handling
+- Cancellation operations
+- Passenger, revenue, occupancy, and trip reports
+- CSV exports
+- Loyalty and coupon administration
+- Responsive administrative navigation and wide-table handling
+
+### Long-term business platform
+
+The roadmap extends the system toward:
+
+- payments and financial reconciliation
+- notifications and messaging
+- branches, offices, and booking channels
+- fleet management
+- driver/workforce operations
+- revenue and fare management
+- customer support and service recovery
+- real-time operations and GPS/ETA
+- partner integrations
+- multi-company/multi-tenant operation
+- enterprise analytics
+- offline operations
+- disaster recovery and business continuity
 
 ---
 
-## Core Technical Architecture
+## Core Architecture
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│                     Next.js Application                     │
-│                 App Router + React + TypeScript             │
-└──────────────────────────────┬──────────────────────────────┘
-                               │
-             ┌─────────────────┴─────────────────┐
-             │                                   │
-             ▼                                   ▼
-┌────────────────────────┐          ┌────────────────────────┐
-│   Public Experience    │          │    Admin Experience    │
-│ Search / Booking /     │          │ Dashboard / Operations │
-│ Tracking / Account     │          │ Reports / Loyalty      │
-└────────────┬───────────┘          └────────────┬───────────┘
-             │                                   │
-             └─────────────────┬─────────────────┘
-                               ▼
-                    ┌────────────────────────┐
-                    │ Server / Data Layer    │
-                    │ Queries / Route        │
-                    │ Handlers / Auth        │
-                    └────────────┬───────────┘
-                                 │
-                ┌────────────────┴────────────────┐
-                ▼                                 ▼
-       ┌──────────────────┐              ┌──────────────────┐
-       │ Supabase Auth    │              │ PostgreSQL       │
-       │ Session / Users  │              │ RLS / Functions  │
-       └──────────────────┘              └──────────────────┘
+Passenger Web App ───────┐
+                         │
+Admin / Operations ──────┼──► Next.js Application
+                         │        │
+                         │        ├── Server / API boundaries
+                         │        ├── Domain/Application logic
+                         │        └── UI components
+                         │
+                         ▼
+                 Supabase / PostgreSQL
+                         │
+              ┌──────────┴──────────┐
+              │                     │
+          Supabase Auth          RLS / DB
+              │                     │
+              └──────────┬──────────┘
+                         ▼
+                Business source of truth
 ```
 
-### Architectural principles
+### Architectural direction
 
-- **Server-first sensitive operations:** sensitive booking operations are handled through server-side boundaries rather than exposing privileged credentials to the browser.
-- **PostgreSQL as the source of truth:** business-critical state lives in the relational database rather than client-only state.
-- **RLS-first authorization:** database policies are part of the security boundary, not merely a UI restriction.
-- **Atomic booking operations:** seat holding and booking confirmation are protected against concurrent booking attempts using database-side operations.
-- **Explicit domain boundaries:** routes, buses, drivers, trips, seats, bookings, passengers, payments, customers, loyalty, referrals, and coupons are modeled as business entities rather than one generic content structure.
-- **Guest-first booking:** account creation is optional for passengers; booking remains possible through contact information and booking reference.
-- **Progressive extensibility:** payment, SMS, loyalty, monitoring, and future multi-company capabilities are isolated as independent concerns.
+- PostgreSQL is the authoritative source for business-critical state.
+- The browser is never authoritative for seat ownership, payment status, or booking validity.
+- Sensitive operations must cross explicit server-side authorization boundaries.
+- Database constraints, transactions, and domain rules must protect business invariants rather than relying only on UI validation.
+- Booking and inventory operations must be safe under concurrent requests.
+- External providers such as payment and SMS remain replaceable integration boundaries.
+- Cached or fallback content may improve perceived performance, but it must never masquerade as authoritative transaction state.
+- Operational state changes should be explicit, auditable, and recoverable.
 
 ---
 
@@ -111,18 +108,17 @@ The platform is intentionally more than a marketing website. It combines two con
 | Language | TypeScript |
 | Database | PostgreSQL through Supabase |
 | Authentication | Supabase Auth |
-| Authorization | PostgreSQL RLS + role-aware server checks |
+| Authorization | PostgreSQL RLS + server-side checks |
 | Server layer | Next.js Route Handlers / Server Components |
 | UI system | Tailwind CSS 4 + shadcn/ui |
 | Package manager | pnpm |
-| Date support | Jalali-aware application utilities |
 | Deployment target | Vercel + Supabase |
 
 ---
 
-## Data Model
+## Business Data Model
 
-The database is designed around the operational lifecycle of intercity transportation.
+The current database foundation is centered on the transport lifecycle:
 
 ```text
 cities
@@ -141,7 +137,6 @@ buses ───────────────┘
 drivers ──────────────┘
 
 customers
-  │
   ├── bookings
   ├── wallet_transactions
   └── referrals
@@ -152,197 +147,123 @@ coupon_redemptions
 admins
 ```
 
-The current database foundation includes sixteen business tables with Row Level Security enabled, including transportation inventory, customer, booking, payment, wallet/referral, coupon, and administrative concerns.
+The schema currently contains the core transportation, booking, customer, payment, loyalty, coupon, and administrative entities with Row Level Security enabled.
+
+The long-term data model is expected to add stronger financial, operational, audit, branch, fleet, workforce, and integration domains rather than continuously extending a single generic model.
 
 ---
 
 ## Booking Integrity
 
-A central engineering requirement is preventing two passengers from successfully purchasing the same seat.
-
-The booking lifecycle is designed around explicit seat states and server/database-side decisions:
+Seat availability and booking ownership are transaction-sensitive business state.
 
 ```text
 AVAILABLE
    │
    ▼
 HELD ───────────────► AVAILABLE
-   │                  (hold expires / release)
-   │
+   │                  (expired/released)
    ▼
 BOOKED
 ```
 
-The public UI may display availability, but the final decision is not trusted to the browser. Seat holding and booking confirmation are executed through server-side/database operations so concurrent requests can be handled safely.
+The UI can display availability, but the authoritative decision is made by server/database operations. Future hardening must also ensure that missing or corrupted inventory is treated as an integrity problem rather than being converted into artificial "all seats available" behavior.
+
+Trip creation and seat-inventory creation must ultimately be atomic so a trip cannot be left in a partially initialized state.
 
 ---
 
 ## Authentication & Authorization
 
-The platform separates two security domains:
-
-### Passenger Accounts
+### Passenger accounts
 
 - Optional registration
 - Login/logout
 - Profile completion
-- Password recovery/reset flow
-- Account-protected routes
-- Booking history / loyalty direction
+- Password recovery/reset
+- Account-protected areas
+- Booking history and loyalty direction
 
-### Administrative Accounts
+### Administrative accounts
 
-- Dedicated admin login
+- Dedicated admin authentication
 - Server-side session verification
-- Admin membership validation
-- Role-aware authorization foundation
-- Planned limited-admin section permissions
-- Database-level authorization through RLS
+- Admin membership checks
+- RLS-backed protection
+- Planned section-level permissions for limited administrators
 
-Administrative access is never intended to be implemented as a client-side boolean such as `isAdmin = true`. The server and database remain authoritative.
+Service-role access is restricted to server-only code. Each privileged operation still requires an explicit authorization boundary; possession of a service-role client is not itself an authorization decision.
 
 ---
 
-## Responsive & Multi-Device Design
+## Responsive Design
 
-Responsive behavior is treated as an architectural concern rather than a final CSS pass.
-
-The current public interface contains explicit support for:
+Responsive behavior is treated as part of the product architecture.
 
 | Tier | Target |
 |---|---|
 | Mobile | < 768px |
-| Tablet portrait | 768px+ |
-| Desktop / tablet landscape | 1024px+ |
-| Wide monitor | 1600px+ |
-| Ultra-wide / very large display | 2560px+ |
+| Tablet | 768px+ |
+| Desktop | 1024px+ |
+| Wide | 1600px+ |
+| Ultra-wide | 2560px+ |
 
-The project includes a shared `ResponsivePhoto` primitive for adaptive image sources and an extended breakpoint scale for wide and ultra-wide screens.
-
-Responsive work also covers:
-
-- Mobile-first navigation behavior
-- Large touch targets for critical controls
-- Responsive booking/checkout actions
-- Wide-table horizontal scrolling inside admin views
-- Scroll affordances for horizontally constrained tables
-- Responsive modal sizing
-- RTL-aware spacing and directional behavior
-- Device-specific image crops where visual composition benefits from them
-
-The goal is not merely for the page to "fit" on a phone; the interaction model should remain usable at each device tier.
+The system includes shared responsive primitives, adaptive imagery, mobile navigation behavior, responsive booking flows, wide-table handling, RTL-aware layout behavior, and device-specific image composition where needed.
 
 ---
 
-## Public Routes
-
-Current public application areas include:
-
-```text
-/
-/search
-/routes
-/track
-/about
-/contact
-/faq
-/luggage-policy
-/terms
-/privacy
-
-/trips/[tripId]/seats
-/trips/[tripId]/checkout
-/trips/[tripId]/confirmation
-
-/account
-/account/login
-/account/signup
-/account/complete-profile
-/account/forgot-password
-/account/reset-password
-```
-
-Administrative areas include:
-
-```text
-/admin
-/admin/login
-```
-
-The application uses thin App Router pages around reusable domain components, keeping server routing separate from the larger transport UI components.
-
----
-
-## Current Admin Modules
-
-The current admin experience contains real database-backed modules for:
+## Current Admin Capabilities
 
 ### Dashboard
 
-- Today vs. yesterday booking statistics
+- Booking statistics
 - Revenue statistics
 - Average occupancy
-- Active trips
+- Active/upcoming trips
 - Recent bookings
-- Upcoming trips
 
 ### Routes
 
-- Create
-- Edit
-- Delete
+- CRUD
 - Active/inactive state
 - Duplicate protection
 - Foreign-key-aware deletion handling
 
 ### Buses
 
-- Create
-- Edit
-- Delete
-- Fleet code
-- Plate number
-- Bus type
-- Capacity
+- CRUD
+- Fleet and plate information
+- Capacity and bus type
 - Amenities
 - Operational status
 
 ### Drivers
 
-- Create
-- Edit
-- Delete
+- CRUD
 - Phone normalization
 - License information
 - Active/inactive state
 
 ### Trips
 
-- Create and edit scheduled trips
-- Route assignment
-- Bus assignment
-- Driver assignment
-- Service date
+- Create/edit scheduled trips
+- Route, bus, and driver assignment
 - Fixed-time or fill-and-go scheduling
 - Price per seat
 - Seat-layout/capacity generation
-- Operational state
+- Operational status
 - Departure/arrival timestamps
-- Quick operational actions
-- Cancellation flow
-- Delay indicator
+- Delay/cancellation actions
 
 ### Bookings
 
 - Real booking data
-- Search by passenger/contact/reference
+- Passenger/contact/reference search
 - Status filtering
 - Seat numbers
-- Payment status
-- Online/offline payment method
-- Offline payment confirmation
-- Booking cancellation action
-- Registration timestamp
+- Payment status and payment method
+- Offline-payment confirmation
+- Cancellation action
 
 ### Reports
 
@@ -350,124 +271,124 @@ The current admin experience contains real database-backed modules for:
 - Passenger count
 - Occupancy
 - Trip count
-- Route-level reports
-- Date-level reports
+- Route-level/date-level reports
 - Custom date range
 - CSV export
 
-### Loyalty
+### Loyalty & Coupons
 
-- Tier thresholds
-- Tier discount percentages
-- Tier activation
-- Referral reward
+- Loyalty tier configuration
+- Referral rewards
 - Coupon CRUD
-- Coupon status/date/usage configuration
+- Coupon status, date, and usage configuration
 
 ---
 
-## Resilience & Failure Philosophy
-
-The public booking platform distinguishes between:
-
-- information that can safely be cached or displayed optimistically;
-- data that must come from the current database state;
-- operations that must be confirmed atomically by the server/database.
-
-A transport system cannot treat a stale browser value as authoritative for seat availability, payment state, or booking ownership.
-
-The roadmap therefore separates **fast user experience** from **authoritative transaction state**.
-
----
-
-## Current Roadmap
+## Current Development Status
 
 ### Completed
 
 ```text
-Phase 1  — UI/UX foundation                              ✅
-Phase 2  — Framework & technical architecture            ✅
-Phase 3  — Supabase schema, RLS & admin auth             ✅
-Phase 4  — Public booking platform                       ✅
-Phase 4.5 — Passenger account & loyalty foundation       ✅
-Phase 4.6 — Professional public responsive system       ✅
-Phase 4.7 — Passenger password-recovery flow             ✅
+Phase 1   — UI/UX foundation                              ✅
+Phase 2   — Framework & technical architecture            ✅
+Phase 3   — Supabase schema, RLS & admin auth             ✅
+Phase 4   — Public booking platform                       ✅
+Phase 4.5 — Passenger account & loyalty foundation        ✅
+Phase 4.6 — Professional public responsive system        ✅
+Phase 4.7 — Passenger password recovery                   ✅
 Phase 5.1 — Route / Bus / Driver / Trip CRUD              ✅
-Phase 5.2 — Booking & offline payment administration     ✅
-Phase 5.3 — Reporting                                   ✅
-Phase 5.4 — Loyalty administration                       ✅
-Phase 5.5 — Professional admin responsive                ✅
-Phase 5.6 — Phone normalization                          ✅
-Phase 5.7 — Operational trip lifecycle                   ✅
+Phase 5.2 — Booking & offline payment administration      ✅
+Phase 5.3 — Reporting                                     ✅
+Phase 5.4 — Loyalty administration                        ✅
+Phase 5.5 — Professional admin responsive                 ✅
+Phase 5.6 — Phone normalization                           ✅
+Phase 5.7 — Operational trip lifecycle                    ✅
 Phase 5.8 — Booking-table operational columns             ✅
 ```
 
-### Immediate remaining admin work
+### Next implementation steps
 
 ```text
-Phase 5.9  — 34-province/city management
-Phase 5.10 — Complete reporting-range and retention policy UX
+Phase 5.9  — Province/city management
+Phase 5.10 — Reporting range and retention UX
 Phase 5.11 — Advanced coupon rules
-Phase 5.12 — Limited-admin management and section permissions
-Phase 5.13 — Editable public-site content, addresses and images
+Phase 5.12 — Limited-admin management and permissions
+Phase 5.13 — Public-site CMS lite
 ```
 
-### Production product integrations
+### Production product work
 
 ```text
-Phase 6 — HesabPay online payments
-Phase 7 — SMS notification infrastructure and event integration
-Phase 8 — Full bilingual delivery and RTL/LTR verification
+Phase 6  — HesabPay and payment transaction core
+Phase 7  — SMS notification infrastructure
+Phase 8  — Full bilingual / RTL-LTR delivery
+Phase 9  — QA, security, concurrency and performance
+Phase 10 — Observability and operational monitoring
+Phase 11 — Production deployment, recovery and handover
 ```
 
-### Production assurance
-
-```text
-Phase 9  — QA, security hardening, concurrency and performance testing
-Phase 10 — Observability, error tracking, metrics, API/database monitoring and alerting
-Phase 11 — Production deployment, backup/recovery, final documentation and production E2E
-```
-
-> Completing feature phases alone does not automatically make the platform production-ready. Payment, failure recovery, authorization, concurrency, accessibility, performance, monitoring, backup/recovery, and real production validation are explicitly treated as separate responsibilities in the roadmap.
+The roadmap then continues into the larger transport-operations platform, including application architecture hardening, audit/business invariants, control center, fleet, workforce, revenue management, finance, CRM/support, booking changes, baggage, real-time operations, partner APIs, multi-company operation, analytics, offline architecture, resilience, security governance, international readiness, and final product audit.
 
 ---
 
-## Production-Readiness Priorities
+## Architecture Audit Summary
 
-Before taking the platform as a finished enterprise product into live operation, the following areas must be proven rather than assumed:
+A September 2026 architecture audit confirmed that the project has a strong product and database foundation but is not yet a fully hardened enterprise transport platform.
 
-1. **Payment correctness** — successful, failed, pending, duplicate, delayed, and refund scenarios.
-2. **Concurrency correctness** — multiple users competing for the final seats.
-3. **Authorization correctness** — customer isolation, limited-admin isolation, and RLS behavior.
-4. **Failure recovery** — network loss, API timeout, provider outage, partial booking state, and expired holds.
-5. **Security hardening** — rate limits, malicious input handling, XSS/injection review, secret isolation, and final RLS audit.
-6. **Accessibility** — keyboard interaction, assistive technology, contrast, touch targets, and RTL/LTR behavior.
-7. **Performance** — public search, seat maps, checkout, database query performance, and concurrent load.
-8. **Observability** — structured server errors, operational metrics, bottleneck detection, and alerts.
-9. **Backup & recovery** — documented data retention, backup strategy, restore procedures, and recovery testing.
-10. **Operational handover** — documentation, account ownership, deployment knowledge, and client training.
+### Strong areas
+
+- booking and seat-state foundation
+- Supabase/PostgreSQL model
+- RLS foundation
+- operational admin functionality
+- responsive public/admin UI
+- real trip lifecycle handling
+- loyalty/coupon foundation
+
+### Historical architectural debt
+
+The audit also identified issues that must not be mistaken for missing features. These are tracked in `ROAD-MAP.md` as historical debt added after the current phase history, including:
+
+- insufficiently explicit domain/application boundaries in some admin flows
+- client-side data mutations that should move behind application/domain services
+- manual validation that should be centralized
+- missing rate limiting/abuse protection for public booking lookup
+- separate trip and seat inserts without one atomic transaction
+- unsafe fallback behavior when expected seat inventory is missing
+- incomplete service-role authorization boundaries
+- lack of comprehensive audit trail
+- business invariants not yet formalized across database/domain/tests
+- missing Money/Ledger/Reconciliation domain
+- lack of seat-layout versioning for historical consistency
+- missing branch/office/agent and booking-channel model
+- insufficient offline-operations architecture
+- incomplete CI/typecheck/lint/test/security release gates
+- incomplete production observability and disaster-recovery discipline
+
+These debts are intentionally tracked after Phase 5.8 so the completed phase history is preserved.
 
 ---
 
-## Engineering Standards
+## Standards & Quality Bar
 
-The long-term target is an application that is not only feature-complete but operationally trustworthy.
+The long-term engineering target includes:
 
-The engineering direction emphasizes:
+- least-privilege authorization
+- centralized input validation
+- database-enforced invariants
+- atomic transactional business operations
+- explicit state machines for critical workflows
+- auditability of operational changes
+- idempotent external operations
+- rate limiting and abuse protection
+- accessible and responsive interfaces
+- automated typecheck/lint/test/build gates
+- structured logging and monitoring
+- documented backup and restore procedures
+- deterministic deployment and rollback procedures
+- privacy and security controls appropriate for a real transport business
 
-- secure server/database boundaries
-- least-privilege access
-- explicit authorization
-- relational integrity
-- deterministic business rules
-- auditable state transitions
-- predictable failure behavior
-- responsive interaction design
-- accessible controls
-- observable production behavior
-- testable domain logic
-- maintainable code organization
-- documented deployment and recovery procedures
+Feature completion alone does not define production readiness.
 
 ---
 
@@ -485,11 +406,11 @@ The engineering direction emphasizes:
 pnpm install
 ```
 
-### Configure environment
+### Environment
 
-Create `.env.local` with the project-specific Supabase and server integration variables required by the current environment.
+Create `.env.local` with the variables required by the current Supabase and server integrations.
 
-Never commit service-role credentials, payment secrets, SMS credentials, or other privileged environment variables to source control.
+Never commit service-role keys, payment secrets, SMS credentials, or other privileged credentials.
 
 ### Run locally
 
@@ -512,8 +433,6 @@ pnpm start
 ---
 
 ## Repository Structure
-
-The repository follows the Next.js App Router structure with domain-oriented components and Supabase infrastructure:
 
 ```text
 app/
@@ -546,9 +465,27 @@ public/
 middleware.ts
 next.config.mjs
 package.json
+
+ROAD-MAP.md
+README.md
+phase-* documentation
 ```
 
-The repository also contains phase-specific SQL/README/change-log documentation and the project master prompt used as the engineering source of truth.
+---
+
+## Documentation Architecture
+
+The repository separates current direction from historical implementation detail:
+
+| Document | Purpose |
+|---|---|
+| `ROAD-MAP.md` | Canonical roadmap, architecture direction, phase status, debts, standards and long-term product plan |
+| `README.md` | Current project overview, architecture summary, setup and operational scope |
+| `PHASE-*` documents | Historical implementation notes and verification records |
+| Database migrations / SQL | Executable schema changes |
+| Runbooks | Deployment, operations, recovery and maintenance procedures |
+
+`ROAD-MAP.md` is the canonical project roadmap. The completed phase history must remain intact. New findings discovered after the historical phase sequence are recorded as historical debt rather than inserted into an already-completed phase.
 
 ---
 
@@ -556,60 +493,48 @@ The repository also contains phase-specific SQL/README/change-log documentation 
 
 ### Guest checkout
 
-Passengers are not forced to create an account before purchasing a ticket.
+Passengers are not required to create an account before purchasing a ticket.
 
 ### Directional routes
 
-An origin/destination pair is directional. For example, `Kabul → Herat` is a separate route definition from `Herat → Kabul`.
+An origin/destination pair is directional. `Kabul → Herat` is a different route from `Herat → Kabul`.
 
 ### Optional operational assignments
 
-Bus and driver assignments can remain nullable where real-world operations do not know those details in advance.
+Bus and driver assignment may remain nullable where operations do not know those details in advance.
 
-### Seat state authority
+### Seat authority
 
-Client-side seat rendering is informational. Final availability is decided through authoritative server/database operations.
+Client rendering is informational. Final availability and ownership are decided by authoritative server/database operations.
 
 ### Loyalty
 
-Passenger loyalty is intended to use configurable tier thresholds and rewards rather than permanently hardcoded business values.
+Tier thresholds and rewards should remain configurable rather than being permanently hardcoded into the UI.
 
 ### Third-party services
 
-Payment, SMS, hosting, and other external services remain replaceable integration boundaries. Their availability must not be assumed to be identical to the availability of the core application.
+Payment, SMS, hosting, and future external integrations must remain replaceable boundaries. External outages must not corrupt core booking state.
 
 ---
 
 ## Project Direction
 
-The long-term objective is to evolve this from a local custom booking website into a serious transport-business software platform suitable for professional intercity operators.
+The product target is not simply to finish all screens.
 
-That means the finish line is not:
+The intended finish line is:
 
-> "All screens are working."
-
-The actual finish line is:
-
-> **Passengers can book safely, operators can run the business from the system, financial and operational state is trustworthy, failures are observable and recoverable, and the platform can be maintained by another professional developer without reverse-engineering the entire project.**
+> **Passengers can book safely, transport operators can run day-to-day operations from the system, financial and operational state is trustworthy, failures are observable and recoverable, and another professional developer can maintain the platform without reverse-engineering the entire project.**
 
 ---
 
 ## Status
 
-**Active development — Phase 5.8 complete.**
+**Active development — Phase 5.8 complete. Phase 5.9 next.**
 
-The project is intentionally not labeled "production ready" until the remaining payment, messaging, QA/security, observability, backup/recovery, and final production validation stages have been completed and verified.
+The project should not be labeled fully production-ready until the remaining transaction, security, QA, observability, recovery, and production-validation requirements have been implemented and verified.
 
 ---
 
 ## License
 
 Proprietary software. All rights reserved unless otherwise agreed in a separate license or software-development agreement with the client.
-
----
-
-## Project Documentation
-
-- `claudeproject-master-prompt.md` — master engineering roadmap and project decisions
-- `CHANGELOG-session-fa.md` — recent implementation and debugging history
-- `PHASE-*` documentation — phase-specific implementation notes and verification records
