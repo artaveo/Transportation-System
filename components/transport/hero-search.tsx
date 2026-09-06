@@ -35,21 +35,17 @@ export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] 
 
   return (
     <section className="relative isolate">
-      {/* Desktop uses the dedicated 1200x630 social/hero image for a cleaner
-          composition. Mobile remains on its dedicated portrait asset, while
-          tablet keeps the existing temporary crop until a purpose-built
-          tablet image is added later. */}
       <div className="absolute inset-x-0 top-0 -z-10 aspect-[1122/1402] md:aspect-[1448/1086] lg:aspect-[1672/941] 3xl:aspect-[1915/821]">
         <ResponsivePhoto
           alt=""
           aria-hidden="true"
           className="size-full object-cover"
           priority
-          objectPosition="center 50%"
+          objectPosition="center 70%"
           mobile="/images/hero-road-dusk-mobile.png"
           tablet="/images/about-corridor-dusk-tablet.png"
-          desktop="/og-image.png"
-          wide="/og-image.png"
+          desktop="/images/hero-road-dusk.png"
+          wide="/images/about-corridor-dusk-wide.png"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/60 to-background" />
         <div className="absolute inset-0 bg-gradient-to-r from-background/80 to-transparent rtl:bg-gradient-to-l" />
