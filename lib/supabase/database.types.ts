@@ -856,6 +856,7 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
+      normalize_phone: { Args: { p_input: string }; Returns: string }
       release_seats: {
         Args: { p_seat_ids: string[]; p_trip_id: string }
         Returns: undefined

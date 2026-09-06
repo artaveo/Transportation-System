@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { UserPlus } from "lucide-react"
 import { dictionary, displayFont } from "@/lib/i18n"
 import { useLang } from "@/lib/lang-context"
+import { normalizePhone, toLatinDigits } from "@/lib/phone-utils"
 import { createClient } from "@/lib/supabase/client"
 import { savePendingProfile } from "@/lib/pending-profile"
 import { SiteHeader } from "./site-header"
@@ -55,7 +56,7 @@ export function AccountSignup() {
       }
 
       const profile = {
-        phone: phone.trim(),
+        phone: normalizePhone(phone),
         fullName: fullName.trim() || undefined,
         referralCode: referralCode.trim() || undefined,
       }
@@ -139,7 +140,7 @@ export function AccountSignup() {
                     dir="ltr"
                     type="tel"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => setPhone(toLatinDigits(e.target.value))}
                     placeholder={t.account.phonePlaceholder}
                     className={`${fieldBase} ${errors.phone ? "border-destructive" : "border-border"}`}
                   />

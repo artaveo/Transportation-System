@@ -5,6 +5,7 @@ import Link from "next/link"
 import { AlertCircle, ArrowLeftRight, CircleCheck, MapPin, Pencil, Search, XCircle } from "lucide-react"
 import { dictionary, displayFont, localizeNumber, type Lang } from "@/lib/i18n"
 import { useLang } from "@/lib/lang-context"
+import { normalizePhone, toLatinDigits } from "@/lib/phone-utils"
 import { cityLabel, formatTime } from "@/lib/booking-data"
 import type { BookingDetail } from "@/lib/supabase/queries"
 import { SiteHeader } from "./site-header"
@@ -81,7 +82,7 @@ export function BookingLookup() {
       const res = await fetch("/api/bookings/lookup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reference: ref.trim(), phone: phone.trim() }),
+        body: JSON.stringify({ reference: ref.trim(), phone: normalizePhone(phone) }),
       })
 
       if (res.status === 404) {
@@ -110,7 +111,11 @@ export function BookingLookup() {
       const res = await fetch("/api/bookings/update-contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reference: ref.trim(), phone: phone.trim(), newPhone: newPhone.trim() }),
+        body: JSON.stringify({
+          reference: ref.trim(),
+          phone: normalizePhone(phone),
+          newPhone: normalizePhone(newPhone),
+        }),
       })
 
       if (!res.ok) {
@@ -118,11 +123,14 @@ export function BookingLookup() {
         return
       }
 
+      const normalizedNewPhone = normalizePhone(newPhone)
       setContactSaved(true)
       setEditingContact(false)
-      // شمارهٔ تماس محلی هم به‌روزرسانی می‌شود تا اگر کاربر دوباره «ویرایش»
-      // را بزند، مقدار فعلی درست نمایش داده شود.
-      setState({ phase: "found", booking: { ...state.booking, contactPhone: newPhone.trim() } })
+      // شمارهٔ تماس محلی هم به‌روزرسانی می‌شود (با همان مقدار نرمال‌شده‌ای که
+      // واقعاً در دیتابیس ذخیره شد) تا اگر کاربر دوباره «ویرایش» را بزند یا
+      // بعداً دوباره پیگیری کند، مقدار درست/قابل‌تطابق نمایش داده شود.
+      setPhone(normalizedNewPhone)
+      setState({ phase: "found", booking: { ...state.booking, contactPhone: normalizedNewPhone } })
     } catch {
       setContactError("genericError")
     } finally {
@@ -137,7 +145,7 @@ export function BookingLookup() {
       const res = await fetch("/api/bookings/request-cancellation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reference: ref.trim(), phone: phone.trim() }),
+        body: JSON.stringify({ reference: ref.trim(), phone: normalizePhone(phone) }),
       })
 
       if (res.status === 409) {
@@ -207,7 +215,7 @@ export function BookingLookup() {
                 dir="ltr"
                 type="tel"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => setPhone(toLatinDigits(e.target.value))}
                 placeholder={t.track.phonePlaceholder}
                 className={`${fieldBase} ${errors.phone ? "border-destructive" : "border-border"}`}
               />
@@ -303,7 +311,7 @@ export function BookingLookup() {
                         dir="ltr"
                         type="tel"
                         value={newPhone}
-                        onChange={(e) => setNewPhone(e.target.value)}
+                        onChange={(e) => setNewPhone(toLatinDigits(e.target.value))}
                         placeholder="07xxxxxxxx"
                         className={`${fieldBase} flex-1`}
                       />

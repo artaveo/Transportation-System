@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createServiceClient } from "@/lib/supabase/service"
+import { normalizePhone } from "@/lib/phone-utils"
 
 type CancelBody = {
   reference?: string
@@ -20,7 +21,8 @@ export async function POST(request: Request) {
   }
 
   const reference = body.reference?.trim()
-  const phone = body.phone?.trim()
+  // نرمال‌سازی دفاعی سمت سرور — بخش ۱۲.۱۸ (رفع باگ ارقام فارسی/عربی).
+  const phone = normalizePhone(body.phone)
 
   if (!reference || !phone) {
     return NextResponse.json({ error: "MISSING_FIELDS" }, { status: 400 })

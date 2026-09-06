@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { isoToday } from "@/lib/date-utils"
+import { normalizePhone } from "@/lib/phone-utils"
 import type { AmenityKey, BusType } from "@/lib/booking-data"
 
 /**
@@ -380,7 +381,7 @@ export async function getBookingByReferenceAndPhone(
        booking_passengers(passenger_full_name, national_id, gender, trip_seats(seat_number))`,
     )
     .eq("booking_reference", reference.trim().toUpperCase())
-    .eq("contact_phone", phone.trim())
+    .eq("contact_phone", normalizePhone(phone))
     .maybeSingle()
 
   if (error) {

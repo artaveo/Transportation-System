@@ -6,6 +6,7 @@ import { UserCheck } from "lucide-react"
 import { dictionary, displayFont } from "@/lib/i18n"
 import { useLang } from "@/lib/lang-context"
 import { createClient } from "@/lib/supabase/client"
+import { normalizePhone, toLatinDigits } from "@/lib/phone-utils"
 import { readPendingProfile, clearPendingProfile } from "@/lib/pending-profile"
 import { SiteHeader } from "./site-header"
 import { SiteFooter } from "./site-footer"
@@ -51,7 +52,7 @@ export function AccountCompleteProfile() {
     try {
       const supabase = createClient()
       const { error } = await supabase.rpc("signup_customer", {
-        p_phone: phone.trim(),
+        p_phone: normalizePhone(phone),
         p_full_name: fullName.trim() || null,
         p_email: email,
         p_referral_code: referralCode.trim() || null,
@@ -118,7 +119,7 @@ export function AccountCompleteProfile() {
                 dir="ltr"
                 type="tel"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => setPhone(toLatinDigits(e.target.value))}
                 placeholder={t.account.phonePlaceholder}
                 className={`${fieldBase} ${errors.phone ? "border-destructive" : "border-border"}`}
               />

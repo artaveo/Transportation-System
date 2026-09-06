@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { dictionary, type Lang } from "@/lib/i18n"
+import { normalizePhone, toLatinDigits } from "@/lib/phone-utils"
 import { createClient } from "@/lib/supabase/client"
 import {
   ConfirmDialog,
@@ -106,7 +107,7 @@ export function DriverManager({ lang }: { lang: Lang }) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const fullName = form.fullName.trim()
-    const phone = form.phone.trim()
+    const phone = normalizePhone(form.phone)
     if (!fullName) {
       setFormError(t.admin.drivers.fullName)
       return
@@ -263,7 +264,7 @@ export function DriverManager({ lang }: { lang: Lang }) {
                   className={inputClass}
                   placeholder="07xxxxxxxx"
                   value={form.phone}
-                  onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                  onChange={(e) => setForm((f) => ({ ...f, phone: toLatinDigits(e.target.value) }))}
                   required
                 />
               </div>

@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeftRight, Building, ChevronLeft, ChevronRight, CreditCard, Luggage, Smartphone } from "lucide-react"
 import { dictionary, displayFont, localizeNumber } from "@/lib/i18n"
+import { normalizePhone, toLatinDigits } from "@/lib/phone-utils"
 import { useLang } from "@/lib/lang-context"
 import { cityLabel, formatTime, pricing } from "@/lib/booking-data"
 import type { TripDetail } from "@/lib/supabase/queries"
@@ -93,7 +94,7 @@ export function CheckoutForm({ trip, seatIds }: { trip: TripDetail; seatIds: str
           // نمایش در صفحهٔ تأییدیه استفاده می‌شد)؛ فیلد جدا برای «نام
           // تماس» در فرم فعلی UI وجود ندارد.
           contactName: passengers[0].fullName.trim(),
-          contactPhone: phone.trim(),
+          contactPhone: normalizePhone(phone),
           passengers: passengers.map((p, i) => ({
             seatId: seatIds[i],
             fullName: p.fullName.trim(),
@@ -221,7 +222,7 @@ export function CheckoutForm({ trip, seatIds }: { trip: TripDetail; seatIds: str
                     type="tel"
                     dir="ltr"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => setPhone(toLatinDigits(e.target.value))}
                     placeholder="07xxxxxxxx"
                     className={`${fieldBase} text-start ${errors.phone ? "border-destructive" : ""}`}
                   />

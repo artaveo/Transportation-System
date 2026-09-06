@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { getBookingByReferenceAndPhone } from "@/lib/supabase/queries"
+import { normalizePhone } from "@/lib/phone-utils"
 
 type LookupBody = {
   reference?: string
@@ -19,7 +20,10 @@ export async function POST(request: Request) {
   }
 
   const reference = body.reference?.trim()
-  const phone = body.phone?.trim()
+  // نرمال‌سازی دفاعی سمت سرور — طبق بخش ۱۲.۱۸: حتی اگر کلاینتی (فعلی یا
+  // آینده) شماره را نرمال نکرده باشد، اینجا هم روی ارقام فارسی/عربی پوشش
+  // داده می‌شود، چون دادهٔ ذخیره‌شده در دیتابیس از این پس همیشه نرمال است.
+  const phone = normalizePhone(body.phone)
 
   if (!reference || !phone) {
     return NextResponse.json({ error: "MISSING_FIELDS" }, { status: 400 })

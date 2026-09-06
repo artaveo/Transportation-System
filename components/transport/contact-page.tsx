@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Building2, Clock, Mail, MapPin, Phone, Send } from "lucide-react"
 import { cities, dictionary, displayFont } from "@/lib/i18n"
 import { useLang } from "@/lib/lang-context"
+import { toLatinDigits } from "@/lib/phone-utils"
 import { SiteHeader } from "./site-header"
 import { SiteFooter } from "./site-footer"
 import { PlaceholderBadge } from "./placeholder-badge"
@@ -132,7 +133,7 @@ export function ContactPage() {
                     dir="ltr"
                     type="tel"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => setPhone(toLatinDigits(e.target.value))}
                     placeholder="07xxxxxxxx"
                     className={`${fieldBase} text-start ${errors.phone ? "border-destructive" : ""}`}
                   />

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createServiceClient } from "@/lib/supabase/service"
+import { normalizePhone } from "@/lib/phone-utils"
 import { MAX_SEATS_PER_BOOKING } from "@/lib/booking-data"
 
 type PassengerInput = {
@@ -87,11 +88,11 @@ export async function POST(request: Request) {
     p_trip_id: tripId,
     p_seat_ids: seatIds,
     p_contact_name: contactName.trim(),
-    p_contact_phone: contactPhone.trim(),
+    p_contact_phone: normalizePhone(contactPhone),
     p_passengers: passengers.map((p) => ({
       seat_id: p.seatId,
       full_name: p.fullName.trim(),
-      phone: p.phone?.trim() || null,
+      phone: p.phone ? normalizePhone(p.phone) || null : null,
       national_id: p.nationalId?.trim() || null,
       gender: p.gender ?? null,
     })),
