@@ -444,6 +444,24 @@ export type Database = {
         }
         Relationships: []
       }
+      loyalty_settings: {
+        Row: {
+          id: boolean
+          referral_reward_amount: number
+          updated_at: string
+        }
+        Insert: {
+          id?: boolean
+          referral_reward_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: boolean
+          referral_reward_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       loyalty_tiers: {
         Row: {
           discount_percent: number
