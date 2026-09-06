@@ -36,9 +36,9 @@ export const metadata: Metadata = {
       'رزرو آنلاین بلیت بس‌های بین‌شهری در مسیر کابل تا هرات — کابل، غزنی، قلات، کندهار، هلمند، نیمروز، فراه، هرات.',
     images: [
       {
-        url: '/images/hero-road-dusk.png',
+        url: '/_next/image?url=%2Fimages%2Fhero-road-dusk.png&w=1200&q=75',
         width: 1200,
-        height: 630,
+        height: 675,
         alt: 'سفرِ شب‌رو | Shabraw — رزرو بلیت بس بین‌شهری افغانستان',
       },
     ],
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     title: 'سفرِ شب‌رو | Shabraw — بلیت بس بین‌شهری افغانستان',
     description:
       'رزرو آنلاین بلیت بس‌های بین‌شهری در مسیر کابل تا هرات.',
-    images: ['/images/hero-road-dusk.png'],
+    images: ['/_next/image?url=%2Fimages%2Fhero-road-dusk.png&w=1200&q=75'],
   },
 }
 
