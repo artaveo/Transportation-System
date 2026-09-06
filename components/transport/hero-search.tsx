@@ -35,50 +35,26 @@ export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] 
 
   return (
     <section className="relative isolate">
-      {/* Dusk sky atmospheric anchor. Mobile + desktop crops are the real
-          hero photos (phase 4.6). tablet/wide crops below are TEMPORARY —
-          they reuse about-page's corridor-dusk images (which happen to be
-          the exact same pixel dimensions as what hero needs at those
-          tiers, since both were generated from the same v0.dev prompt
-          family), until the real hero-specific tablet/wide crops exist.
-          [PLACEHOLDER] فاز ۴.۶ (تکمیل ردیف #۱۰): عکس واقعی هیروی
-          تبلت/عریض هنوز وجود ندارد — پرامپت اصلی v0.dev این عکس در دسترس
-          Zakir نیست. به‌جای حدس‌زدن پرامپت جدید، موقتاً از عکس صفحهٔ
-          درباره‌ما (`about-corridor-dusk-tablet.png` / `-wide.png`) که
-          دقیقاً هم‌ابعاد نسخهٔ موبایل/دسکتاپ هیرو هستند استفاده شد. باید
-          هر وقت عکس واقعی هیرو برای این دو ردهٔ دیگر ساخته شد (تصمیم
-          Zakir)، این دو خط جایگزین شوند.
-
-          فاز ۴.۶ (رفع نهایی/دقیق ردیف ۱۲.۸ — جایگزین راه‌حل تقریبی
-          min-height قبلی): این باکس دیگر با کل ارتفاع section (که با
-          محتوای متن/فرم تعیین می‌شود) یکی نیست؛ فقط به بالای section
-          چسبیده (`inset-x-0 top-0`) و ارتفاعش را خودش، دقیقاً هم‌نسبت
-          فایل عکسی که ResponsivePhoto در همان بریک‌پوینت نشان می‌دهد،
-          با `aspect-[...]` تعیین می‌کند — یعنی برش صفر، در هر عرضی، نه
-          فقط در دو نقطهٔ ۳xl/۴xl (دقیقاً همان الگویی که FlixBus.com واقعاً
-          استفاده می‌کند: عکس یک نوار با نسبت ثابت است، محتوا/فرم اگر
-          بلندتر باشد زیرِ آن، روی پس‌زمینهٔ صاف که گرادیان به آن محو
-          می‌شود، ادامه پیدا می‌کند — نه اینکه چیزی از عکس بریده شود). */}
+      {/* Desktop uses the dedicated 1200x630 social/hero image for a cleaner
+          composition. Mobile remains on its dedicated portrait asset, while
+          tablet keeps the existing temporary crop until a purpose-built
+          tablet image is added later. */}
       <div className="absolute inset-x-0 top-0 -z-10 aspect-[1122/1402] md:aspect-[1448/1086] lg:aspect-[1672/941] 3xl:aspect-[1915/821]">
         <ResponsivePhoto
           alt=""
           aria-hidden="true"
           className="size-full object-cover"
           priority
-          objectPosition="center 70%"
+          objectPosition="center 50%"
           mobile="/images/hero-road-dusk-mobile.png"
           tablet="/images/about-corridor-dusk-tablet.png"
-          desktop="/images/hero-road-dusk.png"
-          wide="/images/about-corridor-dusk-wide.png"
+          desktop="/og-image.png"
+          wide="/og-image.png"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/60 to-background" />
         <div className="absolute inset-0 bg-gradient-to-r from-background/80 to-transparent rtl:bg-gradient-to-l" />
       </div>
 
-      {/* فاز ۴.۸ (رفع ردیف #۱۸ — بحرانی): فاصله‌گذاری عمودی روی موبایل جمع‌تر
-          شد («هیرو = MVP») تا کل ویجت جستجو بدون اسکرول دیده شود؛ خودِ متن
-          تیتر/زیرتیتر تغییر نکرده (کوتاه‌کردن محتوا نیاز به هماهنگی با
-          Zakir دارد — یادداشت در چک‌لیست پایان فاز). */}
       <div className="mx-auto max-w-6xl px-5 pb-8 pt-8 sm:px-8 sm:pb-16 sm:pt-20 md:pb-20 md:pt-24 3xl:max-w-7xl 4xl:max-w-[110rem]">
         <div className="max-w-2xl animate-rise-in">
           <p className="mb-2.5 flex items-center gap-2 text-sm font-medium text-primary sm:mb-4">
@@ -93,7 +69,6 @@ export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] 
           </p>
         </div>
 
-        {/* Search form — the hero's main element */}
         <form
           onSubmit={submit}
           className="mt-5 animate-rise-in rounded-2xl border border-border bg-card/85 p-3.5 shadow-2xl shadow-black/40 backdrop-blur-md sm:mt-12 sm:p-5"
@@ -104,13 +79,7 @@ export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] 
             {t.hero.helper}
           </p>
 
-          {/* Tablet-portrait and up: origin/destination pair with the date
-              picker on its own row, so 768-1023px doesn't stay pinned to a
-              single stacked column. Full 5-column inline layout only kicks
-              in from 1280px (xl) — 1024px (tablet-landscape) was too tight
-              for five inline controls including the date picker. */}
           <div className="grid gap-2.5 sm:gap-3 md:grid-cols-2 xl:grid-cols-[1fr_auto_1fr_1fr_auto] xl:items-end">
-            {/* Origin */}
             <div className="relative">
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                 {t.hero.origin}
@@ -130,7 +99,6 @@ export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] 
               </select>
             </div>
 
-            {/* Swap */}
             <button
               type="button"
               onClick={swap}
@@ -140,7 +108,6 @@ export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] 
               <ArrowRightLeft className="size-4" />
             </button>
 
-            {/* Destination */}
             <div className="relative">
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                 {t.hero.destination}
@@ -160,10 +127,8 @@ export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] 
               </select>
             </div>
 
-            {/* Date */}
             <DatePicker lang={lang} value={date} onChange={setDate} />
 
-            {/* Submit */}
             <button
               type="submit"
               className="flex h-[46px] items-center justify-center gap-2 rounded-xl bg-primary px-6 font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:col-span-2 xl:col-span-1"

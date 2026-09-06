@@ -36,9 +36,8 @@ export const metadata: Metadata = {
       'رزرو آنلاین بلیت بس‌های بین‌شهری در مسیر کابل تا هرات — کابل، غزنی، قلات، کندهار، هلمند، نیمروز، فراه، هرات.',
     images: [
       {
-        url: '/og-image.jpg',
-        width: 1200,
-        height: 630,
+        url: '/og-image.png',
+        type: 'image/png',
         alt: 'سفرِ شب‌رو | Shabraw — رزرو بلیت بس بین‌شهری افغانستان',
       },
     ],
@@ -48,7 +47,7 @@ export const metadata: Metadata = {
     title: 'سفرِ شب‌رو | Shabraw — بلیت بس بین‌شهری افغانستان',
     description:
       'رزرو آنلاین بلیت بس‌های بین‌شهری در مسیر کابل تا هرات.',
-    images: ['/og-image.jpg'],
+    images: ['/og-image.png'],
   },
 }
 
@@ -61,10 +60,6 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  // فاز ۴.۸ (رفع ردیف #۲۳ — بحرانی): زبان از کوکی (نه localStorage) در همان
-  // لحظهٔ رندر سرور خوانده می‌شود تا dir/lang درست از همان اولین بایتِ HTML
-  // روی <html> باشد و کاربر انگلیسی‌زبان دیگر فلاش RTL نبیند. الگوی رسمی
-  // Next.js برای مشکلات هم‌خانواده (فلاش تم/زبان).
   const cookieStore = await cookies()
   const savedLang = cookieStore.get(LANG_COOKIE_NAME)?.value
   const initialLang: Lang = isValidLang(savedLang) ? savedLang : 'fa'
