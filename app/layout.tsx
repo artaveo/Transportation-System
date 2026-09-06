@@ -36,10 +36,10 @@ export const metadata: Metadata = {
       'رزرو آنلاین بلیت بس‌های بین‌شهری در مسیر کابل تا هرات — کابل، غزنی، قلات، کندهار، هلمند، نیمروز، فراه، هرات.',
     images: [
       {
-        url: 'https://transportation-system-blue.vercel.app/og-image.png',
+        url: 'https://transportation-system-blue.vercel.app/og-image.jpg',
         width: 1200,
         height: 630,
-        type: 'image/png',
+        type: 'image/jpeg',
         alt: 'سفرِ شب‌رو | Shabraw — رزرو بلیت بس بین‌شهری افغانستان',
       },
     ],
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
     title: 'سفرِ شب‌رو | Shabraw — بلیت بس بین‌شهری افغانستان',
     description:
       'رزرو آنلاین بلیت بس‌های بین‌شهری در مسیر کابل تا هرات.',
-    images: ['https://transportation-system-blue.vercel.app/og-image.png'],
+    images: ['https://transportation-system-blue.vercel.app/og-image.jpg'],
   },
 }
 
