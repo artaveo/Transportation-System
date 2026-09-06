@@ -20,10 +20,36 @@ const fraunces = Fraunces({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://transportation-system-blue.vercel.app'),
   title: 'سفرِ شب‌رو | Shabraw — بلیت بس بین‌شهری افغانستان',
   description:
     'رزرو آنلاین بلیت بس‌های بین‌شهری در مسیر کابل تا هرات — کابل، غزنی، قلات، کندهار، هلمند، نیمروز، فراه، هرات. Online intercity bus ticket booking on the Kabul-to-Herat corridor.',
   generator: 'v0.app',
+  openGraph: {
+    type: 'website',
+    locale: 'fa_AF',
+    alternateLocale: ['en_US'],
+    url: '/',
+    siteName: 'سفرِ شب‌رو | Shabraw',
+    title: 'سفرِ شب‌رو | Shabraw — بلیت بس بین‌شهری افغانستان',
+    description:
+      'رزرو آنلاین بلیت بس‌های بین‌شهری در مسیر کابل تا هرات — کابل، غزنی، قلات، کندهار، هلمند، نیمروز، فراه، هرات.',
+    images: [
+      {
+        url: '/images/hero-road-dusk.png',
+        width: 1200,
+        height: 630,
+        alt: 'سفرِ شب‌رو | Shabraw — رزرو بلیت بس بین‌شهری افغانستان',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'سفرِ شب‌رو | Shabraw — بلیت بس بین‌شهری افغانستان',
+    description:
+      'رزرو آنلاین بلیت بس‌های بین‌شهری در مسیر کابل تا هرات.',
+    images: ['/images/hero-road-dusk.png'],
+  },
 }
 
 export const viewport: Viewport = {
