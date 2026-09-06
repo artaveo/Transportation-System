@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Loader2, Pencil, Plus, Trash2 } from "lucide-react"
+import { AlarmClock, Ban, CheckCircle2, Loader2, Navigation, Pencil, Plus, Trash2 } from "lucide-react"
 import { dictionary, localizeNumber, type Lang } from "@/lib/i18n"
 import { DEFAULT_BUS_CAPACITY, type BusType } from "@/lib/booking-data"
 import { isoToday } from "@/lib/date-utils"
@@ -14,6 +14,7 @@ import {
   LoadingRows,
   Modal,
   ScrollFade,
+  dangerBtnClass,
   iconBtnClass,
   inputClass,
   labelClass,
@@ -46,9 +47,12 @@ type TripRow = {
   price_per_seat: number
   total_seats_snapshot: number
   status: TripStatus
+  departed_at: string | null
+  arrived_at: string | null
   route: RouteOption | null
   bus: BusOption | null
   driver: DriverOption | null
+  trip_seats: { status: "available" | "held" | "booked" }[] | null
 }
 
 type FormState = {
@@ -134,6 +138,25 @@ export function TripScheduler({ lang }: { lang: Lang }) {
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
+  const [filterTab, setFilterTab] = useState<"all" | "today" | "scheduled" | "departed" | "completed" | "cancelled">(
+    "today",
+  )
+
+  // برای به‌روز ماندن نشانگر «تأخیر احتمالی» بدون نیاز به رفرش کامل دیتا —
+  // هر ۶۰ ثانیه یک re-render سبک، نه fetch جدید.
+  const [nowTick, setNowTick] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(Date.now()), 60_000)
+    return () => clearInterval(id)
+  }, [])
+
+  const [cancellingTrip, setCancellingTrip] = useState<TripRow | null>(null)
+  const [cancellingActiveBookings, setCancellingActiveBookings] = useState<number | null>(null)
+  const [cancelling, setCancelling] = useState(false)
+  const [cancelError, setCancelError] = useState<string | null>(null)
+  const [statusActionError, setStatusActionError] = useState<string | null>(null)
+  const [statusActionPendingId, setStatusActionPendingId] = useState<string | null>(null)
+
   async function load() {
     setLoading(true)
     setLoadError(null)
@@ -153,14 +176,18 @@ export function TripScheduler({ lang }: { lang: Lang }) {
         .from("trips")
         .select(
           `id, route_id, bus_id, driver_id, service_date, departure_time, schedule_type, price_per_seat,
-           total_seats_snapshot, status,
+           total_seats_snapshot, status, departed_at, arrived_at,
            route:routes(id, is_active,
              origin:cities!routes_origin_city_id_fkey(name_en, name_fa),
              destination:cities!routes_destination_city_id_fkey(name_en, name_fa)),
            bus:buses(id, code, bus_type, total_seats),
-           driver:drivers(id, full_name)`,
+           driver:drivers(id, full_name),
+           trip_seats(status)`,
         )
-        .order("service_date", { ascending: false })
+        // ترتیب صعودی (نزدیک‌ترین سفر اول) — چون این جدول حالا یک نمای
+        // عملیاتی «چه سفری الان/بعدی است» هم هست، نه فقط فهرست مدیریتی؛
+        // قبلاً نزولی بود که سفرهای آیندهٔ دورتر را بالای لیست می‌آورد.
+        .order("service_date", { ascending: true })
         .order("departure_time", { ascending: true, nullsFirst: false }),
     ])
 
@@ -275,9 +302,21 @@ export function TripScheduler({ lang }: { lang: Lang }) {
     }
 
     if (modalMode === "edit" && editingId) {
+      // اگر وضعیت از طریق همین دراپ‌داون (نه دکمه‌های سریع بالای جدول) به
+      // «حرکت‌کرده»/«رسیده» تغییر کند، timestamp واقعی را هم اینجا ثبت
+      // می‌کنیم — تا این مسیر جایگزین هیچ‌وقت داده‌ای ناهماهنگ نسازد
+      // (وضعیت=رسیده ولی زمان رسیدن خالی).
+      const extra: { departed_at?: string; arrived_at?: string } = {}
+      if (form.status === "departed" && !editingTrip?.departed_at) {
+        extra.departed_at = new Date().toISOString()
+      }
+      if (form.status === "completed" && !editingTrip?.arrived_at) {
+        extra.arrived_at = new Date().toISOString()
+      }
+
       const { error } = await supabase
         .from("trips")
-        .update({ ...basePayload, status: form.status })
+        .update({ ...basePayload, status: form.status, ...extra })
         .eq("id", editingId)
       setSaving(false)
       if (error) {
@@ -344,6 +383,121 @@ export function TripScheduler({ lang }: { lang: Lang }) {
     await load()
   }
 
+  // چند دقیقه تحمل بعد از ساعت برنامه‌ریزی‌شدهٔ حرکت، قبل از نمایش
+  // نشانگر «تأخیر احتمالی» — استاندارد صنعت حمل‌ونقل معمولاً ۵ تا ۱۵
+  // دقیقه است؛ اینجا محافظه‌کارانه ۱۵ دقیقه انتخاب شده تا نشانگر روی
+  // تأخیرهای جزئی/عادی فعال نشود.
+  const DELAY_GRACE_MINUTES = 15
+
+  function isDelayed(trip: TripRow): boolean {
+    if (trip.status !== "scheduled" && trip.status !== "boarding") return false
+    if (!trip.departure_time) return false // fill_and_go: زمان حرکت ثابتی ندارد که بشود دیرکردش را سنجید
+    const scheduled = new Date(`${trip.service_date}T${trip.departure_time}`)
+    if (Number.isNaN(scheduled.getTime())) return false
+    return nowTick - scheduled.getTime() > DELAY_GRACE_MINUTES * 60_000
+  }
+
+  function seatSummary(trip: TripRow): { booked: number; total: number } {
+    const seats = trip.trip_seats ?? []
+    const booked = seats.filter((s) => s.status === "booked").length
+    return { booked, total: trip.total_seats_snapshot }
+  }
+
+  function statusBadgeClass(status: TripStatus): string {
+    switch (status) {
+      case "departed":
+        return "bg-primary/15 text-primary"
+      case "boarding":
+        return "bg-blue-500/15 text-blue-600 dark:text-blue-400"
+      case "completed":
+        return "bg-green-500/15 text-green-600 dark:text-green-400"
+      case "cancelled":
+        return "bg-destructive/15 text-destructive"
+      default:
+        return "bg-secondary text-secondary-foreground"
+    }
+  }
+
+  const filteredTrips = useMemo(() => {
+    const today = isoToday()
+    return trips.filter((trip) => {
+      switch (filterTab) {
+        case "today":
+          return trip.service_date === today
+        case "scheduled":
+          return trip.status === "scheduled" || trip.status === "boarding"
+        case "departed":
+          return trip.status === "departed"
+        case "completed":
+          return trip.status === "completed"
+        case "cancelled":
+          return trip.status === "cancelled"
+        default:
+          return true
+      }
+    })
+  }, [trips, filterTab])
+
+  const editingTrip = editingId ? (trips.find((tr) => tr.id === editingId) ?? null) : null
+
+  async function handleMarkDeparted(trip: TripRow) {
+    setStatusActionError(null)
+    setStatusActionPendingId(trip.id)
+    const { error } = await supabase
+      .from("trips")
+      .update({ status: "departed", departed_at: new Date().toISOString() })
+      .eq("id", trip.id)
+    setStatusActionPendingId(null)
+    if (error) {
+      setStatusActionError(t.admin.manage.genericError)
+      return
+    }
+    await load()
+  }
+
+  async function handleMarkArrived(trip: TripRow) {
+    setStatusActionError(null)
+    setStatusActionPendingId(trip.id)
+    const { error } = await supabase
+      .from("trips")
+      .update({ status: "completed", arrived_at: new Date().toISOString() })
+      .eq("id", trip.id)
+    setStatusActionPendingId(null)
+    if (error) {
+      setStatusActionError(t.admin.manage.genericError)
+      return
+    }
+    await load()
+  }
+
+  async function openCancelDialog(trip: TripRow) {
+    setCancelError(null)
+    setCancellingTrip(trip)
+    setCancellingActiveBookings(null)
+    // شمارش رزروهای فعال فقط برای اطلاع ادمین است — لغو سفر خودکار
+    // رزروها را کنسل نمی‌کند (بدون مسیر بازپرداخت واقعی هنوز، فاز ۶).
+    const { count } = await supabase
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .eq("trip_id", trip.id)
+      .in("status", ["pending", "confirmed"])
+    setCancellingActiveBookings(count ?? 0)
+  }
+
+  async function handleCancelTrip() {
+    if (!cancellingTrip) return
+    setCancelling(true)
+    setCancelError(null)
+    const { error } = await supabase.from("trips").update({ status: "cancelled" }).eq("id", cancellingTrip.id)
+    setCancelling(false)
+    if (error) {
+      setCancelError(t.admin.manage.genericError)
+      return
+    }
+    setCancellingTrip(null)
+    await load()
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -359,13 +513,31 @@ export function TripScheduler({ lang }: { lang: Lang }) {
 
       {!loading && activeRoutes.length === 0 && <ErrorBanner message={t.admin.scheduler.noRoutesWarning} />}
       {loadError && <ErrorBanner message={loadError} />}
+      {statusActionError && <ErrorBanner message={statusActionError} />}
+
+      <div className="flex flex-wrap gap-1.5">
+        {(["today", "all", "scheduled", "departed", "completed", "cancelled"] as const).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setFilterTab(tab)}
+            className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+              filterTab === tab
+                ? "bg-primary text-primary-foreground"
+                : "bg-secondary text-secondary-foreground hover:bg-secondary/70"
+            }`}
+          >
+            {t.admin.scheduler.filters[tab]}
+          </button>
+        ))}
+      </div>
 
       <div className="rounded-xl border border-border bg-card">
         <ScrollFade>
         <div className="overflow-x-auto">
           {loading ? (
             <LoadingRows />
-          ) : trips.length === 0 ? (
+          ) : filteredTrips.length === 0 ? (
             <EmptyState message={t.admin.scheduler.empty} />
           ) : (
             <table className="w-full border-collapse">
@@ -390,13 +562,24 @@ export function TripScheduler({ lang }: { lang: Lang }) {
                     {t.admin.scheduler.pricePerSeat}
                   </th>
                   <th className="whitespace-nowrap px-3 py-2 text-start text-xs font-medium text-muted-foreground">
+                    {t.admin.scheduler.capacity}
+                  </th>
+                  <th className="whitespace-nowrap px-3 py-2 text-start text-xs font-medium text-muted-foreground">
                     {t.admin.scheduler.status}
                   </th>
                   <th className="whitespace-nowrap px-3 py-2 text-end text-xs font-medium text-muted-foreground" />
                 </tr>
               </thead>
               <tbody>
-                {trips.map((trip) => (
+                {filteredTrips.map((trip) => {
+                  const { booked, total } = seatSummary(trip)
+                  const isFull = booked >= total
+                  const delayed = isDelayed(trip)
+                  const canDepart = trip.status === "scheduled" || trip.status === "boarding"
+                  const canArrive = trip.status === "departed"
+                  const canCancel = trip.status === "scheduled" || trip.status === "boarding" || trip.status === "departed"
+                  const actionPending = statusActionPendingId === trip.id
+                  return (
                   <tr key={trip.id} className="border-b border-border/40 last:border-0 hover:bg-secondary/30">
                     <td className="whitespace-nowrap px-3 py-2.5 text-sm text-foreground">{routeLabel(trip.route, lang)}</td>
                     <td className="whitespace-nowrap px-3 py-2.5 text-sm text-foreground" dir="ltr">
@@ -414,13 +597,61 @@ export function TripScheduler({ lang }: { lang: Lang }) {
                     <td className="whitespace-nowrap px-3 py-2.5 text-sm text-foreground">
                       {localizeNumber(trip.price_per_seat, lang)} {t.routes.currency}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2.5 text-sm">
-                      <span className="rounded-full bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
-                        {t.admin.tripStatus[trip.status]}
+                    <td className="whitespace-nowrap px-3 py-2.5 text-sm" dir="ltr">
+                      <span className={isFull ? "text-muted-foreground" : "text-foreground"}>
+                        {localizeNumber(booked, lang)} / {localizeNumber(total, lang)}
                       </span>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2.5 text-sm">
+                      <div className="flex flex-col gap-1">
+                        <span className={`w-fit rounded-full px-2 py-0.5 text-xs font-medium ${statusBadgeClass(trip.status)}`}>
+                          {t.admin.tripStatus[trip.status]}
+                        </span>
+                        {delayed && (
+                          <span className="flex w-fit items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+                            <AlarmClock className="size-3" />
+                            {t.admin.scheduler.delayed}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="whitespace-nowrap px-3 py-2.5 text-end">
                       <div className="flex justify-end gap-1">
+                        {canDepart && (
+                          <button
+                            type="button"
+                            className={iconBtnClass}
+                            onClick={() => handleMarkDeparted(trip)}
+                            disabled={actionPending}
+                            aria-label={t.admin.scheduler.markDeparted}
+                            title={t.admin.scheduler.markDeparted}
+                          >
+                            {actionPending ? <Loader2 className="size-4 animate-spin" /> : <Navigation className="size-4" />}
+                          </button>
+                        )}
+                        {canArrive && (
+                          <button
+                            type="button"
+                            className={iconBtnClass}
+                            onClick={() => handleMarkArrived(trip)}
+                            disabled={actionPending}
+                            aria-label={t.admin.scheduler.markArrived}
+                            title={t.admin.scheduler.markArrived}
+                          >
+                            {actionPending ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+                          </button>
+                        )}
+                        {canCancel && (
+                          <button
+                            type="button"
+                            className={iconBtnClass}
+                            onClick={() => openCancelDialog(trip)}
+                            aria-label={t.admin.scheduler.cancelTrip}
+                            title={t.admin.scheduler.cancelTrip}
+                          >
+                            <Ban className="size-4" />
+                          </button>
+                        )}
                         <button type="button" className={iconBtnClass} onClick={() => openEdit(trip)} aria-label={t.admin.manage.edit}>
                           <Pencil className="size-4" />
                         </button>
@@ -438,7 +669,8 @@ export function TripScheduler({ lang }: { lang: Lang }) {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           )}
@@ -595,6 +827,20 @@ export function TripScheduler({ lang }: { lang: Lang }) {
                     </option>
                   ))}
                 </select>
+                {(editingTrip?.departed_at || editingTrip?.arrived_at) && (
+                  <div className="mt-2 flex flex-col gap-0.5 text-xs text-muted-foreground">
+                    {editingTrip?.departed_at && (
+                      <span>
+                        {t.admin.scheduler.departedAt}: {new Date(editingTrip.departed_at).toLocaleString(lang === "fa" ? "fa-AF" : "en-US")}
+                      </span>
+                    )}
+                    {editingTrip?.arrived_at && (
+                      <span>
+                        {t.admin.scheduler.arrivedAt}: {new Date(editingTrip.arrived_at).toLocaleString(lang === "fa" ? "fa-AF" : "en-US")}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
@@ -623,6 +869,28 @@ export function TripScheduler({ lang }: { lang: Lang }) {
           errorMessage={deleteError}
           onConfirm={handleDelete}
           onCancel={() => setDeletingTrip(null)}
+        />
+      )}
+
+      {cancellingTrip && (
+        <ConfirmDialog
+          title={t.admin.scheduler.cancelTripConfirmTitle}
+          body={
+            cancellingActiveBookings === null
+              ? "…"
+              : cancellingActiveBookings > 0
+                ? t.admin.scheduler.cancelTripConfirmBodyWithBookings.replace(
+                    "{count}",
+                    localizeNumber(cancellingActiveBookings, lang),
+                  )
+                : t.admin.scheduler.cancelTripConfirmBodyNoBookings
+          }
+          confirmLabel={t.admin.scheduler.cancelTrip}
+          cancelLabel={t.admin.manage.cancel}
+          pending={cancelling || cancellingActiveBookings === null}
+          errorMessage={cancelError}
+          onConfirm={handleCancelTrip}
+          onCancel={() => setCancellingTrip(null)}
         />
       )}
     </div>

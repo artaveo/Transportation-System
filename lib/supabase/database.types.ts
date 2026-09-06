@@ -685,8 +685,10 @@ export type Database = {
       }
       trips: {
         Row: {
+          arrived_at: string | null
           bus_id: string | null
           created_at: string
+          departed_at: string | null
           departure_time: string | null
           driver_id: string | null
           id: string
@@ -699,8 +701,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          arrived_at?: string | null
           bus_id?: string | null
           created_at?: string
+          departed_at?: string | null
           departure_time?: string | null
           driver_id?: string | null
           id?: string
@@ -713,8 +717,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          arrived_at?: string | null
           bus_id?: string | null
           created_at?: string
+          departed_at?: string | null
           departure_time?: string | null
           driver_id?: string | null
           id?: string
