@@ -5,7 +5,7 @@ import { CheckCircle2, Loader2, Search, XCircle } from "lucide-react"
 import { dictionary, localizeNumber, type Lang } from "@/lib/i18n"
 import { cityLabel } from "@/lib/booking-data"
 import { createClient } from "@/lib/supabase/client"
-import { ConfirmDialog, EmptyState, ErrorBanner, LoadingRows, iconBtnClass } from "./admin-ui"
+import { ConfirmDialog, EmptyState, ErrorBanner, LoadingRows, ScrollFade, iconBtnClass } from "./admin-ui"
 
 type BookingStatus = "pending" | "confirmed" | "completed" | "cancelled" | "refunded"
 type PaymentStatus = "pending" | "confirmed" | "failed" | "refunded"
@@ -175,6 +175,7 @@ export function BookingsTable({ lang }: { lang: Lang }) {
       {loadError && <ErrorBanner message={loadError} />}
 
       <div className="rounded-xl border border-border bg-card">
+        <ScrollFade>
         <div className="overflow-x-auto">
           {loading ? (
             <LoadingRows />
@@ -300,6 +301,7 @@ export function BookingsTable({ lang }: { lang: Lang }) {
             </table>
           )}
         </div>
+        </ScrollFade>
       </div>
 
       {confirmingId && (

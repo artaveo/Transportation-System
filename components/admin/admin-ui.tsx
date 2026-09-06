@@ -28,6 +28,30 @@ export const dangerBtnClass =
 export const iconBtnClass =
   "inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
 
+/**
+ * فاز ۵.۵ (ریسپانسیو پنل ادمین): همان گرادیان محو دو لبهٔ فاز ۴.۸
+ * (routes-index/destinations-grid) برای جدول‌های پنل ادمین که روی
+ * موبایل نیاز به اسکرول افقی دارند — اینجا یک‌بار مشترک ساخته شد چون
+ * تقریباً همهٔ مدیرهای ادمین (Bookings/Bus/Driver/Route/Trip/Reports/
+ * Loyalty) این الگو را نیاز داشتند. جدول dir فیزیکی اجباری ندارد (جهت
+ * از جهت صفحه پیروی می‌کند)، پس start-0/end-0 منطقی درست است.
+ */
+export function ScrollFade({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative">
+      {children}
+      <div
+        className="pointer-events-none absolute inset-y-0 start-0 w-8 bg-gradient-to-r from-card to-transparent sm:hidden"
+        aria-hidden="true"
+      />
+      <div
+        className="pointer-events-none absolute inset-y-0 end-0 w-8 bg-gradient-to-l from-card to-transparent sm:hidden"
+        aria-hidden="true"
+      />
+    </div>
+  )
+}
+
 export function Modal({
   title,
   onClose,
@@ -59,7 +83,7 @@ export function Modal({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="text-muted-foreground hover:text-foreground"
+            className="-m-2 flex size-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
           >
             <X className="size-5" />
           </button>

@@ -6,7 +6,7 @@ import { dictionary, displayFont, localizeNumber, localizePercent, type Lang } f
 import { cityLabel, formatTime } from "@/lib/booking-data"
 import { addDaysIso, isoToday } from "@/lib/date-utils"
 import { createClient } from "@/lib/supabase/client"
-import { EmptyState, ErrorBanner, LoadingRows } from "./admin-ui"
+import { EmptyState, ErrorBanner, LoadingRows, ScrollFade } from "./admin-ui"
 
 type CityRef = { name_en: string; name_fa: string }
 type BookingStatus = "pending" | "confirmed" | "completed" | "cancelled" | "refunded"
@@ -238,6 +238,7 @@ export function DashboardView({ lang }: { lang: Lang }) {
           <h2 className="text-sm font-semibold text-foreground">{t.admin.recentTitle}</h2>
           <p className="text-xs text-muted-foreground">{t.admin.recentSub}</p>
         </div>
+        <ScrollFade>
         <div className="overflow-x-auto">
           {recentBookings.length === 0 ? (
             <EmptyState message={t.admin.bookingsPanel.empty} />
@@ -303,6 +304,7 @@ export function DashboardView({ lang }: { lang: Lang }) {
             </table>
           )}
         </div>
+        </ScrollFade>
       </div>
 
       <div className="rounded-xl border border-border bg-card">

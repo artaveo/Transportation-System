@@ -13,6 +13,7 @@ import {
   ErrorBanner,
   LoadingRows,
   Modal,
+  ScrollFade,
   iconBtnClass,
   inputClass,
   labelClass,
@@ -360,6 +361,7 @@ export function TripScheduler({ lang }: { lang: Lang }) {
       {loadError && <ErrorBanner message={loadError} />}
 
       <div className="rounded-xl border border-border bg-card">
+        <ScrollFade>
         <div className="overflow-x-auto">
           {loading ? (
             <LoadingRows />
@@ -441,6 +443,7 @@ export function TripScheduler({ lang }: { lang: Lang }) {
             </table>
           )}
         </div>
+        </ScrollFade>
       </div>
 
       {modalMode && (
@@ -465,7 +468,7 @@ export function TripScheduler({ lang }: { lang: Lang }) {
               </select>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className={labelClass}>{t.admin.scheduler.bus}</label>
                 <select className={inputClass} value={form.busId} onChange={(e) => onBusChange(e.target.value)}>
@@ -523,7 +526,7 @@ export function TripScheduler({ lang }: { lang: Lang }) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {form.scheduleType === "fixed_time" && (
                 <div>
                   <label className={labelClass}>{t.admin.scheduler.departureTime}</label>
@@ -551,7 +554,7 @@ export function TripScheduler({ lang }: { lang: Lang }) {
             </div>
 
             {modalMode === "create" ? (
-              <div className="grid grid-cols-2 gap-3 rounded-lg border border-dashed border-border p-3">
+              <div className="grid grid-cols-1 gap-3 rounded-lg border border-dashed border-border p-3 sm:grid-cols-2">
                 <div>
                   <label className={labelClass}>{t.admin.scheduler.seatLayout}</label>
                   <select

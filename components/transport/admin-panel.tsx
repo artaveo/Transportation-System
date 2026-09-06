@@ -77,7 +77,7 @@ export function AdminPanel() {
   return (
     <div className="flex min-h-screen bg-background">
       {/* Desktop sidebar */}
-      <aside className="hidden w-60 shrink-0 flex-col border-e border-sidebar-border bg-sidebar py-5 lg:flex">
+      <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-e border-sidebar-border bg-sidebar py-5 lg:flex">
         <div className="mb-6 flex items-center gap-2 px-4">
           <span className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
             <BusFront className="size-4" strokeWidth={2.2} />
@@ -104,10 +104,14 @@ export function AdminPanel() {
       {mobileNavOpen && (
         <div className="fixed inset-0 z-50 flex lg:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={() => setMobileNavOpen(false)} />
-          <aside className="relative flex w-64 flex-col border-e border-sidebar-border bg-sidebar py-5">
+          <aside className="relative flex w-64 flex-col overflow-y-auto border-e border-sidebar-border bg-sidebar py-5">
             <div className="mb-6 flex items-center justify-between px-4">
               <span className="text-sm font-semibold text-sidebar-foreground">{t.admin.title}</span>
-              <button onClick={() => setMobileNavOpen(false)} aria-label="Close" className="text-sidebar-foreground/70">
+              <button
+                onClick={() => setMobileNavOpen(false)}
+                aria-label="Close"
+                className="flex size-11 items-center justify-center rounded-md text-sidebar-foreground/70"
+              >
                 <X className="size-5" />
               </button>
             </div>
@@ -122,7 +126,7 @@ export function AdminPanel() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMobileNavOpen(true)}
-              className="text-foreground lg:hidden"
+              className="flex size-11 items-center justify-center rounded-md text-foreground lg:hidden"
               aria-label="Menu"
             >
               <Menu className="size-5" />

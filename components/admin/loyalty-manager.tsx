@@ -10,6 +10,7 @@ import {
   ErrorBanner,
   LoadingRows,
   Modal,
+  ScrollFade,
   iconBtnClass,
   inputClass,
   labelClass,
@@ -538,6 +539,7 @@ export function LoyaltyManager({ lang }: { lang: Lang }) {
         {couponsError && <ErrorBanner message={couponsError} />}
 
         <div className="rounded-xl border border-border bg-card">
+          <ScrollFade>
           <div className="overflow-x-auto">
             {couponsLoading ? (
               <LoadingRows />
@@ -617,6 +619,7 @@ export function LoyaltyManager({ lang }: { lang: Lang }) {
               </table>
             )}
           </div>
+          </ScrollFade>
         </div>
       </div>
 
@@ -695,7 +698,7 @@ export function LoyaltyManager({ lang }: { lang: Lang }) {
               <p className="mt-1 text-xs text-muted-foreground">{tl.codeHelper}</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className={labelClass}>{tl.discountType}</label>
                 <select
@@ -721,7 +724,7 @@ export function LoyaltyManager({ lang }: { lang: Lang }) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className={labelClass}>{tl.validFrom}</label>
                 <input

@@ -11,6 +11,7 @@ import {
   ErrorBanner,
   LoadingRows,
   Modal,
+  ScrollFade,
   iconBtnClass,
   inputClass,
   labelClass,
@@ -207,6 +208,7 @@ export function BusManager({ lang }: { lang: Lang }) {
       {loadError && <ErrorBanner message={loadError} />}
 
       <div className="rounded-xl border border-border bg-card">
+        <ScrollFade>
         <div className="overflow-x-auto">
           {loading ? (
             <LoadingRows />
@@ -284,12 +286,13 @@ export function BusManager({ lang }: { lang: Lang }) {
             </table>
           )}
         </div>
+        </ScrollFade>
       </div>
 
       {modalMode && (
         <Modal title={modalMode === "edit" ? t.admin.buses.editBus : t.admin.buses.addBus} onClose={closeModal}>
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className={labelClass}>{t.admin.buses.code}</label>
                 <input
@@ -313,7 +316,7 @@ export function BusManager({ lang }: { lang: Lang }) {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className={labelClass}>{t.search.busType}</label>
                 <select

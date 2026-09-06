@@ -6,7 +6,7 @@ import { dictionary, displayFont, localizeNumber, localizePercent, type Lang } f
 import { cityLabel } from "@/lib/booking-data"
 import { addDaysIso, isoToday } from "@/lib/date-utils"
 import { createClient } from "@/lib/supabase/client"
-import { EmptyState, ErrorBanner, LoadingRows, inputClass, labelClass, secondaryBtnClass } from "./admin-ui"
+import { EmptyState, ErrorBanner, LoadingRows, ScrollFade, inputClass, labelClass, secondaryBtnClass } from "./admin-ui"
 
 type CityRef = { name_en: string; name_fa: string }
 type RouteOption = { id: string; origin: CityRef | null; destination: CityRef | null }
@@ -387,6 +387,7 @@ export function ReportsDashboard({ lang }: { lang: Lang }) {
                     {tr.exportCsv}
                   </button>
                 </div>
+                <ScrollFade>
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
                     <thead>
@@ -443,6 +444,7 @@ export function ReportsDashboard({ lang }: { lang: Lang }) {
                     </tbody>
                   </table>
                 </div>
+                </ScrollFade>
               </div>
 
               {/* تفکیک بر اساس تاریخ */}
@@ -454,6 +456,7 @@ export function ReportsDashboard({ lang }: { lang: Lang }) {
                     {tr.exportCsv}
                   </button>
                 </div>
+                <ScrollFade>
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
                     <thead>
@@ -500,6 +503,7 @@ export function ReportsDashboard({ lang }: { lang: Lang }) {
                     </tbody>
                   </table>
                 </div>
+                </ScrollFade>
               </div>
             </>
           )}
