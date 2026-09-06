@@ -29,6 +29,7 @@ type BookingRow = {
     route: { origin: CityRef | null; destination: CityRef | null } | null
   } | null
   paymentStatus: PaymentStatus | null
+  seatNumbers: string[]
 }
 
 const ALL_STATUSES: BookingStatus[] = ["pending", "confirmed", "completed", "cancelled", "refunded"]
@@ -74,7 +75,8 @@ export function BookingsTable({ lang }: { lang: Lang }) {
          trip:trips(service_date,
            route:routes(origin:cities!routes_origin_city_id_fkey(name_en, name_fa),
                         destination:cities!routes_destination_city_id_fkey(name_en, name_fa))),
-         payments(status, created_at)`,
+         payments(status, created_at),
+         booking_passengers(trip_seats(seat_number))`,
       )
       .order("created_at", { ascending: false })
       .order("created_at", { foreignTable: "payments", ascending: false })
@@ -90,10 +92,16 @@ export function BookingsTable({ lang }: { lang: Lang }) {
         const trip = unwrap(row.trip)
         const route = trip ? unwrap(trip.route) : null
         const payments = Array.isArray(row.payments) ? row.payments : row.payments ? [row.payments] : []
+        const passengers = Array.isArray(row.booking_passengers) ? row.booking_passengers : []
+        const seatNumbers = passengers
+          .map((p: any) => unwrap(p.trip_seats)?.seat_number)
+          .filter((n: unknown): n is string => typeof n === "string")
+          .sort((a: string, b: string) => a.localeCompare(b, undefined, { numeric: true }))
         return {
           ...row,
           trip: trip ? { service_date: trip.service_date, route: route ? { origin: unwrap(route.origin), destination: unwrap(route.destination) } : null } : null,
           paymentStatus: payments[0]?.status ?? null,
+          seatNumbers,
         }
       }),
     )
@@ -192,6 +200,7 @@ export function BookingsTable({ lang }: { lang: Lang }) {
                   <th className="whitespace-nowrap px-3 py-2 text-start text-xs font-medium text-muted-foreground">{t.admin.cols.route}</th>
                   <th className="whitespace-nowrap px-3 py-2 text-start text-xs font-medium text-muted-foreground">{t.admin.cols.date}</th>
                   <th className="whitespace-nowrap px-3 py-2 text-start text-xs font-medium text-muted-foreground">{t.admin.cols.seats}</th>
+                  <th className="whitespace-nowrap px-3 py-2 text-start text-xs font-medium text-muted-foreground">{t.admin.cols.seatNumbers}</th>
                   <th className="whitespace-nowrap px-3 py-2 text-start text-xs font-medium text-muted-foreground">{t.admin.cols.amount}</th>
                   <th className="whitespace-nowrap px-3 py-2 text-start text-xs font-medium text-muted-foreground">
                     {t.admin.bookingsPanel.paymentMethod}
@@ -200,6 +209,7 @@ export function BookingsTable({ lang }: { lang: Lang }) {
                     {t.admin.bookingsPanel.paymentStatus}
                   </th>
                   <th className="whitespace-nowrap px-3 py-2 text-start text-xs font-medium text-muted-foreground">{t.admin.cols.status}</th>
+                  <th className="whitespace-nowrap px-3 py-2 text-start text-xs font-medium text-muted-foreground">{t.admin.cols.registeredAt}</th>
                   <th className="whitespace-nowrap px-3 py-2 text-end text-xs font-medium text-muted-foreground" />
                 </tr>
               </thead>
@@ -234,6 +244,9 @@ export function BookingsTable({ lang }: { lang: Lang }) {
                         {b.trip?.service_date ?? "—"}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2.5 text-sm text-foreground">{localizeNumber(b.seats_count, lang)}</td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-sm text-foreground" dir="ltr">
+                        {b.seatNumbers.length > 0 ? b.seatNumbers.join("، ") : "—"}
+                      </td>
                       <td className="whitespace-nowrap px-3 py-2.5 text-sm text-foreground">
                         {localizeNumber(b.total_amount, lang)} {t.routes.currency}
                       </td>
@@ -261,6 +274,12 @@ export function BookingsTable({ lang }: { lang: Lang }) {
                         >
                           {t.admin.status[b.status]}
                         </span>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-xs text-muted-foreground" dir="ltr">
+                        {new Date(b.created_at).toLocaleString(lang === "fa" ? "fa-AF" : "en-US", {
+                          dateStyle: "short",
+                          timeStyle: "short",
+                        })}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2.5 text-end">
                         <div className="flex justify-end gap-1">
