@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { BusFront, LayoutDashboard, ListFilter, LogOut, Menu, Route as RouteIcon, Ticket, Users, X } from "lucide-react"
+import { BarChart3, BusFront, LayoutDashboard, ListFilter, LogOut, Menu, Route as RouteIcon, Ticket, Users, X } from "lucide-react"
 import { dictionary } from "@/lib/i18n"
 import { useLang } from "@/lib/lang-context"
 import { createClient } from "@/lib/supabase/client"
@@ -12,12 +12,13 @@ import { RouteManager } from "@/components/admin/route-manager"
 import { BusManager } from "@/components/admin/bus-manager"
 import { DriverManager } from "@/components/admin/driver-manager"
 import { TripScheduler } from "@/components/admin/trip-scheduler"
+import { ReportsDashboard } from "@/components/admin/reports-dashboard"
 
 // فاز ۵.۲: آخرین بازماندهٔ دادهٔ ساختگی (lib/admin-data.ts) هم حذف شد —
 // dashboard و tab «رزروها» حالا هر دو مستقیماً از bookings/trips/payments
-// واقعی Supabase می‌آیند (طبق درخواست صریح Zakir). گزارش‌گیری آماری
-// عمیق‌تر (روند/مقایسهٔ دوره‌ای) هنوز فاز ۵.۳ است.
-type Tab = "dashboard" | "trips" | "bookings" | "buses" | "routes" | "drivers"
+// واقعی Supabase می‌آیند (طبق درخواست صریح Zakir). فاز ۵.۳ گزارش‌گیری
+// آماری عمیق‌تر (تفکیک مسیر/تاریخ، خروجی CSV) را در تب «گزارش‌ها» اضافه کرد.
+type Tab = "dashboard" | "trips" | "bookings" | "buses" | "routes" | "drivers" | "reports"
 
 export function AdminPanel() {
   const { lang } = useLang()
@@ -40,6 +41,7 @@ export function AdminPanel() {
     { key: "buses", label: t.admin.nav.buses, icon: BusFront },
     { key: "drivers", label: t.admin.nav.drivers, icon: Users },
     { key: "routes", label: t.admin.nav.routes, icon: RouteIcon },
+    { key: "reports", label: t.admin.nav.reports, icon: BarChart3 },
   ]
 
   const NavList = (
@@ -143,6 +145,7 @@ export function AdminPanel() {
           {tab === "buses" && <BusManager lang={lang} />}
           {tab === "drivers" && <DriverManager lang={lang} />}
           {tab === "routes" && <RouteManager lang={lang} />}
+          {tab === "reports" && <ReportsDashboard lang={lang} />}
         </main>
       </div>
     </div>
