@@ -117,35 +117,10 @@ export function getAdminTrips(count = 12): AdminTrip[] {
   return trips.sort((a, b) => a.departMinutes - b.departMinutes)
 }
 
-export function getAdminBuses(count = 14): AdminBus[] {
-  const buses: AdminBus[] = []
-  for (let i = 0; i < count; i++) {
-    const seed = hash(`admin-bus-${i}`)
-    const isVip = seed % 3 === 0
-    buses.push({
-      code: `${isVip ? "VIP" : "STD"}-${100 + (seed % 40)}`,
-      plate: `${1200 + (seed % 800)} د ${20 + (seed % 60)}`,
-      type: isVip ? "vip" : "standard",
-      totalSeats: isVip ? DEFAULT_BUS_CAPACITY.vip : DEFAULT_BUS_CAPACITY.standard,
-      status: seed % 11 === 0 ? "maintenance" : "active",
-    })
-  }
-  return buses
-}
-
-export function getAdminRoutes(): AdminRoute[] {
-  const pairs = routePairs()
-  return pairs.slice(0, 14).map(([fromEn, toEn], i) => {
-    const seed = hash(`admin-route-${fromEn}-${toEn}`)
-    return {
-      fromEn,
-      toEn,
-      hours: 4 + (seed % 10),
-      price: 700 + (seed % 12) * 100,
-      dailyTrips: 3 + (seed % 8),
-    }
-  })
-}
+// فاز ۵.۱: getAdminBuses/getAdminRoutes (دادهٔ ساختگی) حذف شدند — پنل ادمین
+// حالا برای بس‌ها/مسیرها از BusManager/RouteManager (Supabase واقعی) استفاده
+// می‌کند. getAdminTrips اینجا می‌ماند چون هنوز فقط برای ویجت «سرویس‌های
+// پیشِ‌رو»ی داشبورد (دادهٔ ساختگی، در انتظار فاز ۵.۳) استفاده می‌شود.
 
 export function getAdminStats() {
   const bookings = getAdminBookings()

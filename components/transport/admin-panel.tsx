@@ -14,23 +14,24 @@ import {
   Route as RouteIcon,
   Search,
   Ticket,
+  Users,
   X,
 } from "lucide-react"
 import { dictionary, displayFont, localizeNumber, localizePercent } from "@/lib/i18n"
 import { useLang } from "@/lib/lang-context"
 import { cityLabel, formatTime } from "@/lib/booking-data"
-import {
-  getAdminBookings,
-  getAdminBuses,
-  getAdminRoutes,
-  getAdminStats,
-  getAdminTrips,
-  type AdminBooking,
-  type BookingStatus,
-} from "@/lib/admin-data"
+import { getAdminBookings, getAdminStats, getAdminTrips, type AdminBooking, type BookingStatus } from "@/lib/admin-data"
 import { createClient } from "@/lib/supabase/client"
+import { RouteManager } from "@/components/admin/route-manager"
+import { BusManager } from "@/components/admin/bus-manager"
+import { DriverManager } from "@/components/admin/driver-manager"
+import { TripScheduler } from "@/components/admin/trip-scheduler"
 
-type Tab = "dashboard" | "trips" | "bookings" | "buses" | "routes"
+// فاز ۵.۱: تب‌های routes/buses/drivers/trips حالا مدیرهای CRUD واقعی‌اند
+// (components/admin/*)، نه جدول‌های خواندنیِ دادهٔ ساختگی. dashboard/bookings
+// عمداً هنوز روی lib/admin-data.ts (ساختگی) مانده‌اند — به ترتیب فاز ۵.۲
+// (رزروها) و ۵.۳ (گزارش‌گیری) به دادهٔ واقعی وصل می‌شوند.
+type Tab = "dashboard" | "trips" | "bookings" | "buses" | "routes" | "drivers"
 
 export function AdminPanel() {
   const { lang } = useLang()
@@ -52,6 +53,7 @@ export function AdminPanel() {
     { key: "trips", label: t.admin.nav.trips, icon: Ticket },
     { key: "bookings", label: t.admin.nav.bookings, icon: ListFilter },
     { key: "buses", label: t.admin.nav.buses, icon: BusFront },
+    { key: "drivers", label: t.admin.nav.drivers, icon: Users },
     { key: "routes", label: t.admin.nav.routes, icon: RouteIcon },
   ]
 
@@ -151,10 +153,11 @@ export function AdminPanel() {
 
         <main className="flex-1 overflow-x-auto p-4 sm:p-6">
           {tab === "dashboard" && <DashboardView lang={lang} />}
-          {tab === "trips" && <TripsView lang={lang} />}
+          {tab === "trips" && <TripScheduler lang={lang} />}
           {tab === "bookings" && <BookingsView lang={lang} />}
-          {tab === "buses" && <BusesView lang={lang} />}
-          {tab === "routes" && <RoutesView lang={lang} />}
+          {tab === "buses" && <BusManager lang={lang} />}
+          {tab === "drivers" && <DriverManager lang={lang} />}
+          {tab === "routes" && <RouteManager lang={lang} />}
         </main>
       </div>
     </div>
@@ -419,139 +422,3 @@ function BookingsView({ lang }: { lang: "fa" | "en" }) {
   )
 }
 
-// ---------- Trips ----------
-
-function TripsView({ lang }: { lang: "fa" | "en" }) {
-  const t = dictionary[lang]
-  const trips = useMemo(() => getAdminTrips(20), [])
-
-  return (
-    <div className="rounded-xl border border-border bg-card">
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="border-b border-border/60">
-              <Th>{t.admin.cols.route}</Th>
-              <Th>{t.admin.cols.time}</Th>
-              <Th>{t.admin.cols.bus}</Th>
-              <Th>{lang === "fa" ? "نوع" : "Type"}</Th>
-              <Th>{t.admin.cols.occupancy}</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {trips.map((trip) => (
-              <tr key={trip.id} className="border-b border-border/40 last:border-0 hover:bg-secondary/30">
-                <Td>
-                  <span className="flex items-center gap-1.5">
-                    <span>{cityLabel(trip.fromEn, lang)}</span>
-                    <ArrowLeftRight className="size-3.5 shrink-0" aria-hidden="true" />
-                    <span>{cityLabel(trip.toEn, lang)}</span>
-                  </span>
-                </Td>
-                <Td dir="ltr">{formatTime(trip.departMinutes, lang)}</Td>
-                <Td dir="ltr">{trip.bus}</Td>
-                <Td>{trip.bus.startsWith("VIP") ? t.busTypes.vip : t.busTypes.standard}</Td>
-                <Td>
-                  <div className="flex items-center gap-2">
-                    <div className="h-1.5 w-20 overflow-hidden rounded-full bg-secondary">
-                      <div className="h-full rounded-full bg-primary" style={{ width: `${trip.occupancy}%` }} />
-                    </div>
-                    <span className="text-xs text-muted-foreground">{localizePercent(trip.occupancy, lang)}</span>
-                  </div>
-                </Td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  )
-}
-
-// ---------- Buses ----------
-
-function BusesView({ lang }: { lang: "fa" | "en" }) {
-  const t = dictionary[lang]
-  const buses = useMemo(() => getAdminBuses(20), [])
-
-  return (
-    <div className="rounded-xl border border-border bg-card">
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="border-b border-border/60">
-              <Th>{t.admin.cols.bus}</Th>
-              <Th>{lang === "fa" ? "پلاک" : "Plate"}</Th>
-              <Th>{lang === "fa" ? "نوع" : "Type"}</Th>
-              <Th>{lang === "fa" ? "ظرفیت" : "Capacity"}</Th>
-              <Th>{t.admin.cols.status}</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {buses.map((bus) => (
-              <tr key={bus.code} className="border-b border-border/40 last:border-0 hover:bg-secondary/30">
-                <Td className={displayFont(lang)} dir="ltr">
-                  {bus.code}
-                </Td>
-                <Td dir="ltr" className="text-muted-foreground">
-                  {bus.plate}
-                </Td>
-                <Td>{t.busTypes[bus.type]}</Td>
-                <Td>{localizeNumber(bus.totalSeats, lang)}</Td>
-                <Td>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      bus.status === "active" ? "bg-accent/15 text-accent" : "bg-destructive/15 text-destructive"
-                    }`}
-                  >
-                    {bus.status === "active" ? (lang === "fa" ? "فعال" : "Active") : lang === "fa" ? "تعمیراتی" : "Maintenance"}
-                  </span>
-                </Td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  )
-}
-
-// ---------- Routes ----------
-
-function RoutesView({ lang }: { lang: "fa" | "en" }) {
-  const t = dictionary[lang]
-  const routes = useMemo(() => getAdminRoutes(), [])
-
-  return (
-    <div className="rounded-xl border border-border bg-card">
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="border-b border-border/60">
-              <Th>{t.routes.from}</Th>
-              <Th>{t.routes.to}</Th>
-              <Th>{t.routes.duration}</Th>
-              <Th>{t.routes.startingFrom}</Th>
-              <Th>{t.routes.trips}</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {routes.map((r) => (
-              <tr key={`${r.fromEn}-${r.toEn}`} className="border-b border-border/40 last:border-0 hover:bg-secondary/30">
-                <Td>{cityLabel(r.fromEn, lang)}</Td>
-                <Td>{cityLabel(r.toEn, lang)}</Td>
-                <Td>
-                  {localizeNumber(r.hours, lang)} {t.routes.hours}
-                </Td>
-                <Td>
-                  {localizeNumber(r.price, lang)} {t.routes.currency}
-                </Td>
-                <Td>{localizeNumber(r.dailyTrips, lang)}</Td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  )
-}
