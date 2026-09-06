@@ -782,6 +782,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_cancel_booking: {
+        Args: { p_booking_id: string }
+        Returns: undefined
+      }
+      admin_confirm_offline_payment: {
+        Args: { p_booking_id: string }
+        Returns: undefined
+      }
       confirm_booking: {
         Args: {
           p_contact_name: string
