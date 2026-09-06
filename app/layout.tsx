@@ -34,9 +34,14 @@ export const metadata: Metadata = {
     title: 'سفرِ شب‌رو | Shabraw — بلیت بس بین‌شهری افغانستان',
     description:
       'رزرو آنلاین بلیت بس‌های بین‌شهری در مسیر کابل تا هرات — کابل، غزنی، قلات، کندهار، هلمند، نیمروز، فراه، هرات.',
+    // نکتهٔ حیاتی: تلگرام/واتساپ/... عکسِ og:image را جدا از خودِ صفحه و
+    // بر اساس همین آدرس فایل کش می‌کنند — رفرش‌کردن پیش‌نمایش صفحه (حتی با
+    // ابزار رسمی) کشِ خودِ عکس را پاک نمی‌کند. پس هر بار محتوای این عکس
+    // عوض شد، حتماً باید *اسم فایل* هم عوض شود (مثلاً v2 -> v3)، وگرنه
+    // پلتفرم‌ها همان نسخهٔ قدیمی را نشان می‌دهند حتی بعد از دیپلوی درست.
     images: [
       {
-        url: 'https://transportation-system-blue.vercel.app/og-image.jpg',
+        url: 'https://transportation-system-blue.vercel.app/og-image-v2.jpg',
         width: 1200,
         height: 630,
         type: 'image/jpeg',
@@ -49,7 +54,7 @@ export const metadata: Metadata = {
     title: 'سفرِ شب‌رو | Shabraw — بلیت بس بین‌شهری افغانستان',
     description:
       'رزرو آنلاین بلیت بس‌های بین‌شهری در مسیر کابل تا هرات.',
-    images: ['https://transportation-system-blue.vercel.app/og-image.jpg'],
+    images: ['https://transportation-system-blue.vercel.app/og-image-v2.jpg'],
   },
 }
 
