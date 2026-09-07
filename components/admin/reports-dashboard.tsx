@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { ArrowLeftRight, Download } from "lucide-react"
+import { ArrowLeftRight, Download, Loader2 } from "lucide-react"
 import { dictionary, displayFont, localizeNumber, localizePercent, type Lang } from "@/lib/i18n"
 import { cityLabel } from "@/lib/booking-data"
 import { addDaysIso, isoToday } from "@/lib/date-utils"
@@ -31,7 +31,7 @@ type Bucket = {
   tripsCount: number
 }
 
-type Preset = "7d" | "30d" | "90d" | "custom"
+type Preset = "7d" | "30d" | "90d" | "all" | "custom"
 
 function unwrap<T>(v: T | T[] | null): T | null {
   return Array.isArray(v) ? (v[0] ?? null) : v
@@ -75,6 +75,14 @@ function downloadCsv(filename: string, rows: (string | number)[][]) {
  * می‌کند — عدد درآمد صفر یا نام مسیر «—» دیده می‌شود. این دقیقاً همان
  * رفتاری است که BookingsTable/DashboardView هم دارند؛ رفع آن (در صورت نیاز)
  * باید صریح در بخش ۵.۴ یا یک فاز RLS مجزا درخواست شود.
+ *
+ * فاز ۵.۱۰: دکمهٔ چهارم «همهٔ بازه‌ها» اضافه شد. از قبل هم می‌شد با تایپ
+ * دستی یک تاریخ خیلی قدیمی در فیلد «از تاریخ» (که `min` ندارد) کل
+ * تاریخچه را دید — این دکمه فقط آن قابلیت پنهان را بارز می‌کند، منطق
+ * کوئری تغییری نکرد. محور «قدیمی‌ترین» همان `trips.service_date` است
+ * (نه `bookings.created_at`)، چون خودِ این گزارش از ابتدا بر مبنای
+ * تاریخ سفر فیلتر می‌شود، نه تاریخ ثبت رزرو؛ قدیمی‌ترین تاریخ فقط یک‌بار
+ * lazy fetch و کش می‌شود (نه در بارگذاری اولیهٔ کامپوننت).
  */
 export function ReportsDashboard({ lang }: { lang: Lang }) {
   const t = dictionary[lang]
@@ -91,12 +99,36 @@ export function ReportsDashboard({ lang }: { lang: Lang }) {
   const [trips, setTrips] = useState<TripRow[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [earliestDate, setEarliestDate] = useState<string | null>(null)
+  const [earliestLoading, setEarliestLoading] = useState(false)
 
-  function applyPreset(p: Exclude<Preset, "custom">) {
+  function applyPreset(p: "7d" | "30d" | "90d") {
     const days = p === "7d" ? 6 : p === "30d" ? 29 : 89
     setFrom(addDaysIso(today, -days))
     setTo(today)
     setPreset(p)
+  }
+
+  async function applyAllTime() {
+    setPreset("all")
+    setTo(today)
+    if (earliestDate) {
+      setFrom(earliestDate)
+      return
+    }
+    setEarliestLoading(true)
+    const { data, error } = await supabase
+      .from("trips")
+      .select("service_date")
+      .order("service_date", { ascending: true })
+      .limit(1)
+      .maybeSingle()
+    setEarliestLoading(false)
+    // اگر هنوز هیچ سفری ثبت نشده، از امروز شروع می‌کنیم (بازهٔ یک‌روزه)
+    // به‌جای گیرکردن روی حالت خطا.
+    const earliest = !error && data ? data.service_date : today
+    setEarliestDate(earliest)
+    setFrom(earliest)
   }
 
   const rangeValid = from <= to
@@ -283,7 +315,7 @@ export function ReportsDashboard({ lang }: { lang: Lang }) {
   ]
 
   const presetBtnClass = (p: Preset) =>
-    `rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+    `rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
       preset === p
         ? "border-primary bg-primary/10 text-primary"
         : "border-border text-muted-foreground hover:bg-secondary/60 hover:text-foreground"
@@ -307,6 +339,15 @@ export function ReportsDashboard({ lang }: { lang: Lang }) {
           </button>
           <button type="button" className={presetBtnClass("90d")} onClick={() => applyPreset("90d")}>
             {tr.last90}
+          </button>
+          <button
+            type="button"
+            className={presetBtnClass("all")}
+            onClick={applyAllTime}
+            disabled={earliestLoading}
+          >
+            {earliestLoading && <Loader2 className="me-1 inline size-3 animate-spin" />}
+            {tr.allTime}
           </button>
         </div>
 
