@@ -154,6 +154,49 @@ export function LoadingRows() {
   )
 }
 
+/**
+ * فاز ۵.۹: اولین کنترل toggle مستقیم (بدون مودال) در پنل ادمین — برای
+ * فعال/غیرفعال کردن سریع یک شهر بدون باز کردن فرم. تا این فاز همهٔ
+ * وضعیت‌های is_active فقط از طریق چک‌باکس داخل مودال ویرایش تغییر
+ * می‌کردند (نگاه کنید به RouteManager/BusManager/DriverManager)؛ اینجا
+ * چون تعداد ردیف‌ها زیاد است (۳۴ شهر) یک سوییچ inline منطقی‌تر است.
+ * اندازهٔ لمسی مطابق استاندارد ۴۴px پروژه (نگاه کنید به فاز ۴.۸/۵.۵).
+ */
+export function ToggleSwitch({
+  checked,
+  onChange,
+  disabled = false,
+  label,
+}: {
+  checked: boolean
+  onChange: () => void
+  disabled?: boolean
+  label: string
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      disabled={disabled}
+      onClick={onChange}
+      className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      <span className={`relative h-6 w-11 rounded-full transition-colors ${checked ? "bg-accent" : "bg-muted"}`}>
+        {/* موقعیت با start/end منطقی است، نه translateX، تا در RTL/LTR بدون
+            نیاز به دانستن جهت صفحه به‌درستی جابه‌جا شود (طبق قرارداد پروژه). */}
+        <span
+          className={`absolute top-0.5 size-5 rounded-full bg-card shadow transition-[inset-inline-start] duration-150 ${
+            checked ? "start-[1.375rem]" : "start-0.5"
+          }`}
+        />
+      </span>
+      {disabled && <Loader2 className="absolute size-3.5 animate-spin text-muted-foreground" />}
+    </button>
+  )
+}
+
 /** پیام‌های خطای دیتابیس Postgres/PostgREST که هر چهار مدیر ممکن است به آن‌ها برخورد کنند. */
 export function isUniqueViolation(error: { code?: string } | null): boolean {
   return error?.code === "23505"

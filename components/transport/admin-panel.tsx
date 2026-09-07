@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Award, BarChart3, BusFront, LayoutDashboard, ListFilter, LogOut, Menu, Route as RouteIcon, Ticket, Users, X } from "lucide-react"
+import { Award, BarChart3, BusFront, LayoutDashboard, ListFilter, LogOut, Map, Menu, Route as RouteIcon, Ticket, Users, X } from "lucide-react"
 import { dictionary } from "@/lib/i18n"
 import { useLang } from "@/lib/lang-context"
 import { createClient } from "@/lib/supabase/client"
@@ -14,14 +14,16 @@ import { DriverManager } from "@/components/admin/driver-manager"
 import { TripScheduler } from "@/components/admin/trip-scheduler"
 import { ReportsDashboard } from "@/components/admin/reports-dashboard"
 import { LoyaltyManager } from "@/components/admin/loyalty-manager"
+import { CityManager } from "@/components/admin/city-manager"
 
 // فاز ۵.۲: آخرین بازماندهٔ دادهٔ ساختگی (lib/admin-data.ts) هم حذف شد —
 // dashboard و tab «رزروها» حالا هر دو مستقیماً از bookings/trips/payments
 // واقعی Supabase می‌آیند (طبق درخواست صریح Zakir). فاز ۵.۳ گزارش‌گیری
 // آماری (تفکیک مسیر/تاریخ، خروجی CSV) را در تب «گزارش‌ها» اضافه کرد.
 // فاز ۵.۴ مدیریت باشگاه مشتریان (سطوح/پاداش رفرال/کوپن) را در تب
-// «باشگاه مشتریان» اضافه کرد.
-type Tab = "dashboard" | "trips" | "bookings" | "buses" | "routes" | "drivers" | "reports" | "loyalty"
+// «باشگاه مشتریان» اضافه کرد. فاز ۵.۹ تب «شهرها» را اضافه کرد: سوییچ
+// فعال/غیرفعال روی هر یک از ۳۴ ولایت (بدون نیاز به SQL دستی).
+type Tab = "dashboard" | "trips" | "bookings" | "buses" | "routes" | "cities" | "drivers" | "reports" | "loyalty"
 
 export function AdminPanel() {
   const { lang } = useLang()
@@ -44,6 +46,7 @@ export function AdminPanel() {
     { key: "buses", label: t.admin.nav.buses, icon: BusFront },
     { key: "drivers", label: t.admin.nav.drivers, icon: Users },
     { key: "routes", label: t.admin.nav.routes, icon: RouteIcon },
+    { key: "cities", label: t.admin.nav.cities, icon: Map },
     { key: "reports", label: t.admin.nav.reports, icon: BarChart3 },
     { key: "loyalty", label: t.admin.nav.loyalty, icon: Award },
   ]
@@ -153,6 +156,7 @@ export function AdminPanel() {
           {tab === "buses" && <BusManager lang={lang} />}
           {tab === "drivers" && <DriverManager lang={lang} />}
           {tab === "routes" && <RouteManager lang={lang} />}
+          {tab === "cities" && <CityManager lang={lang} />}
           {tab === "reports" && <ReportsDashboard lang={lang} />}
           {tab === "loyalty" && <LoyaltyManager lang={lang} />}
         </main>

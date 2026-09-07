@@ -49,6 +49,14 @@ function cityName(city: CityRow | null, lang: Lang): string {
   return lang === "fa" ? city.name_fa : city.name_en
 }
 
+// فاز ۵.۹: دراپ‌داون مبدأ/مقصد باید هر ۳۴ شهر را نشان دهد (نه فقط فعال‌ها)،
+// چون یک ادمین باید بتواند برای شهری که هنوز فعال نیست هم مسیر از پیش
+// تعریف کند؛ اما باید واضح مشخص شود کدام‌ها غیرفعال‌اند.
+function cityOptionLabel(city: CityRow, lang: Lang, t: (typeof dictionary)[Lang]): string {
+  const name = lang === "fa" ? city.name_fa : city.name_en
+  return city.is_active ? name : `${name} (${t.admin.manage.inactive})`
+}
+
 export function RouteManager({ lang }: { lang: Lang }) {
   const t = dictionary[lang]
   const supabase = createClient()
@@ -305,7 +313,7 @@ export function RouteManager({ lang }: { lang: Lang }) {
                 </option>
                 {originOptions.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {cityName(c, lang)}
+                    {cityOptionLabel(c, lang, t)}
                   </option>
                 ))}
               </select>
@@ -323,7 +331,7 @@ export function RouteManager({ lang }: { lang: Lang }) {
                 </option>
                 {destinationOptions.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {cityName(c, lang)}
+                    {cityOptionLabel(c, lang, t)}
                   </option>
                 ))}
               </select>
