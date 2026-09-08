@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { dictionary, localizeNumber, localizePercent, type Lang } from "@/lib/i18n"
+import { cityLabel } from "@/lib/booking-data"
 import { createClient } from "@/lib/supabase/client"
 import {
   ConfirmDialog,
@@ -30,6 +31,9 @@ type LoyaltyTier = {
   is_active: boolean
 }
 
+type CityRef = { name_en: string; name_fa: string }
+type RouteOption = { id: string; origin: CityRef | null; destination: CityRef | null }
+
 type DiscountType = "percent" | "fixed"
 
 type Coupon = {
@@ -43,6 +47,14 @@ type Coupon = {
   valid_from: string | null
   valid_to: string | null
   is_active: boolean
+  // فاز ۵.۱۱ — قوانین پیشرفتهٔ کوپن
+  min_loyalty_tier_id: string | null
+  per_customer_limit: number | null
+  applicable_route_ids: string[] | null
+  first_trip_only: boolean
+  min_seats: number | null
+  min_amount: number | null
+  guest_allowed: boolean
 }
 
 type TierFormState = { minCompletedTrips: string; discountPercent: string; isActive: boolean }
@@ -55,6 +67,14 @@ type CouponFormState = {
   validFrom: string
   validTo: string
   isActive: boolean
+  // فاز ۵.۱۱
+  minLoyaltyTierId: string
+  perCustomerLimit: string
+  applicableRouteIds: string[]
+  firstTripOnly: boolean
+  minSeats: string
+  minAmount: string
+  registeredOnly: boolean // = !guest_allowed — عنوان مثبت برای فرم واضح‌تر است
 }
 
 const EMPTY_COUPON_FORM: CouponFormState = {
@@ -66,6 +86,13 @@ const EMPTY_COUPON_FORM: CouponFormState = {
   validFrom: "",
   validTo: "",
   isActive: true,
+  minLoyaltyTierId: "",
+  perCustomerLimit: "",
+  applicableRouteIds: [],
+  firstTripOnly: false,
+  minSeats: "",
+  minAmount: "",
+  registeredOnly: false,
 }
 
 function tierName(tier: LoyaltyTier, lang: Lang): string {
@@ -85,6 +112,13 @@ function tierName(tier: LoyaltyTier, lang: Lang): string {
  * ۲. پاداش کد معرفی — یک عدد سراسری در loyalty_settings (جدول تازهٔ همین
  *    فاز)؛ قبلاً در handle_booking_completed() هاردکد بود (فاز ۴.۵).
  * ۳. کدهای تخفیف — CRUD کامل روی coupons.
+ *
+ * فاز ۵.۱۱: قوانین پیشرفتهٔ کوپن اضافه شد (سطح حداقلی، سقف به‌ازای هر
+ * مشتری، محدودیت به مسیر خاص، فقط اولین سفر، حداقل صندلی/مبلغ، فقط
+ * مشتری ثبت‌نامی). اعتبارسنجی واقعی این قوانین در تابع دیتابیس
+ * confirm_booking() انجام می‌شود (نه اینجا) — این فرم فقط مقدار ستون‌های
+ * تازهٔ coupons را می‌نویسد. مقدار null/false در هر ستون یعنی آن قانون
+ * غیرفعال است (بدون محدودیت، دقیقاً رفتار قبل از این فاز).
  */
 export function LoyaltyManager({ lang }: { lang: Lang }) {
   const t = dictionary[lang]
@@ -121,6 +155,9 @@ export function LoyaltyManager({ lang }: { lang: Lang }) {
   const [deletingCoupon, setDeletingCoupon] = useState<Coupon | null>(null)
   const [couponDeleting, setCouponDeleting] = useState(false)
   const [couponDeleteError, setCouponDeleteError] = useState<string | null>(null)
+  // فاز ۵.۱۱ — گزینه‌های مسیر برای محدودیت «فقط این مسیرها»
+  const [routeOptions, setRouteOptions] = useState<RouteOption[]>([])
+  const [routesLoading, setRoutesLoading] = useState(true)
 
   async function loadTiers() {
     setTiersLoading(true)
@@ -157,7 +194,9 @@ export function LoyaltyManager({ lang }: { lang: Lang }) {
     const { data, error } = await supabase
       .from("coupons")
       .select(
-        "id, code, discount_type, discount_value, is_stackable_with_tier, usage_limit, used_count, valid_from, valid_to, is_active",
+        `id, code, discount_type, discount_value, is_stackable_with_tier, usage_limit, used_count,
+         valid_from, valid_to, is_active, min_loyalty_tier_id, per_customer_limit,
+         applicable_route_ids, first_trip_only, min_seats, min_amount, guest_allowed`,
       )
       .order("created_at", { ascending: false })
     if (error) {
@@ -169,10 +208,33 @@ export function LoyaltyManager({ lang }: { lang: Lang }) {
     setCouponsLoading(false)
   }
 
+  async function loadRouteOptions() {
+    setRoutesLoading(true)
+    const { data, error } = await supabase
+      .from("routes")
+      .select(
+        `id,
+         origin:cities!routes_origin_city_id_fkey(name_en, name_fa),
+         destination:cities!routes_destination_city_id_fkey(name_en, name_fa)`,
+      )
+      .order("created_at", { ascending: false })
+    if (!error) {
+      setRouteOptions(
+        ((data ?? []) as any[]).map((r) => ({
+          id: r.id,
+          origin: Array.isArray(r.origin) ? (r.origin[0] ?? null) : r.origin,
+          destination: Array.isArray(r.destination) ? (r.destination[0] ?? null) : r.destination,
+        })),
+      )
+    }
+    setRoutesLoading(false)
+  }
+
   useEffect(() => {
     loadTiers()
     loadReferralSetting()
     loadCoupons()
+    loadRouteOptions()
 
     async function loadCurrentAdmin() {
       const { data: userRes } = await supabase.auth.getUser()
@@ -300,6 +362,13 @@ export function LoyaltyManager({ lang }: { lang: Lang }) {
       validFrom: coupon.valid_from ?? "",
       validTo: coupon.valid_to ?? "",
       isActive: coupon.is_active,
+      minLoyaltyTierId: coupon.min_loyalty_tier_id ?? "",
+      perCustomerLimit: coupon.per_customer_limit !== null ? String(coupon.per_customer_limit) : "",
+      applicableRouteIds: coupon.applicable_route_ids ?? [],
+      firstTripOnly: coupon.first_trip_only,
+      minSeats: coupon.min_seats !== null ? String(coupon.min_seats) : "",
+      minAmount: coupon.min_amount !== null ? String(coupon.min_amount) : "",
+      registeredOnly: !coupon.guest_allowed,
     })
     setCouponFormError(null)
   }
@@ -308,6 +377,20 @@ export function LoyaltyManager({ lang }: { lang: Lang }) {
     if (couponSaving) return
     setCouponModalMode(null)
     setEditingCouponId(null)
+  }
+
+  function toggleCouponRoute(routeId: string) {
+    setCouponForm((f) => ({
+      ...f,
+      applicableRouteIds: f.applicableRouteIds.includes(routeId)
+        ? f.applicableRouteIds.filter((id) => id !== routeId)
+        : [...f.applicableRouteIds, routeId],
+    }))
+  }
+
+  function routeOptionLabel(route: RouteOption): string {
+    if (!route.origin || !route.destination) return "—"
+    return `${cityLabel(route.origin.name_en, lang)} ↔ ${cityLabel(route.destination.name_en, lang)}`
   }
 
   async function handleCouponSubmit(e: React.FormEvent) {
@@ -342,6 +425,25 @@ export function LoyaltyManager({ lang }: { lang: Lang }) {
       return
     }
 
+    // فاز ۵.۱۱ — اعتبارسنجی سمت فرم برای فیلدهای تازه (اعتبارسنجی نهایی
+    // و لازم‌الاجرا همیشه در confirm_booking() سمت دیتابیس است؛ این فقط
+    // بازخورد سریع به ادمین قبل از ارسال است).
+    const perCustomerLimit = couponForm.perCustomerLimit.trim() === "" ? null : Number(couponForm.perCustomerLimit)
+    if (perCustomerLimit !== null && (!Number.isFinite(perCustomerLimit) || perCustomerLimit <= 0)) {
+      setCouponFormError(tl.perCustomerLimit)
+      return
+    }
+    const minSeats = couponForm.minSeats.trim() === "" ? null : Number(couponForm.minSeats)
+    if (minSeats !== null && (!Number.isFinite(minSeats) || minSeats <= 0)) {
+      setCouponFormError(tl.minSeats)
+      return
+    }
+    const minAmount = couponForm.minAmount.trim() === "" ? null : Number(couponForm.minAmount)
+    if (minAmount !== null && (!Number.isFinite(minAmount) || minAmount < 0)) {
+      setCouponFormError(tl.minAmount)
+      return
+    }
+
     setCouponSaving(true)
     setCouponFormError(null)
 
@@ -354,6 +456,13 @@ export function LoyaltyManager({ lang }: { lang: Lang }) {
       valid_from: validFrom,
       valid_to: validTo,
       is_active: couponForm.isActive,
+      min_loyalty_tier_id: couponForm.minLoyaltyTierId || null,
+      per_customer_limit: perCustomerLimit,
+      applicable_route_ids: couponForm.applicableRouteIds.length > 0 ? couponForm.applicableRouteIds : null,
+      first_trip_only: couponForm.firstTripOnly,
+      min_seats: minSeats,
+      min_amount: minAmount,
+      guest_allowed: !couponForm.registeredOnly,
       ...(couponModalMode === "create" ? { created_by_admin_id: adminId } : {}),
     }
 
@@ -782,6 +891,117 @@ export function LoyaltyManager({ lang }: { lang: Lang }) {
               />
               {tl.couponActive}
             </label>
+
+            {/* فاز ۵.۱۱ — قوانین پیشرفته (همه اختیاری؛ خالی/بدون‌تیک یعنی بدون محدودیت) */}
+            <div className="mt-1 border-t border-border/60 pt-3">
+              <p className="mb-3 text-xs font-medium text-muted-foreground">{tl.advancedRulesTitle}</p>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className={labelClass}>
+                    {tl.minLoyaltyTier} <span className="text-muted-foreground/70">({t.admin.manage.optional})</span>
+                  </label>
+                  <select
+                    className={inputClass}
+                    value={couponForm.minLoyaltyTierId}
+                    onChange={(e) => setCouponForm((f) => ({ ...f, minLoyaltyTierId: e.target.value }))}
+                  >
+                    <option value="">{tl.noTierRestriction}</option>
+                    {tiers.map((tier) => (
+                      <option key={tier.id} value={tier.id}>
+                        {tierName(tier, lang)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>
+                    {tl.perCustomerLimit} <span className="text-muted-foreground/70">({t.admin.manage.optional})</span>
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    step="1"
+                    className={inputClass}
+                    value={couponForm.perCustomerLimit}
+                    onChange={(e) => setCouponForm((f) => ({ ...f, perCustomerLimit: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className={labelClass}>
+                    {tl.minSeats} <span className="text-muted-foreground/70">({t.admin.manage.optional})</span>
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    step="1"
+                    className={inputClass}
+                    value={couponForm.minSeats}
+                    onChange={(e) => setCouponForm((f) => ({ ...f, minSeats: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>
+                    {tl.minAmount} <span className="text-muted-foreground/70">({t.admin.manage.optional})</span>
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="1"
+                    className={inputClass}
+                    value={couponForm.minAmount}
+                    onChange={(e) => setCouponForm((f) => ({ ...f, minAmount: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <label className={labelClass}>{tl.applicableRoutes}</label>
+                {routesLoading ? (
+                  <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                ) : routeOptions.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">{tl.noRoutesYet}</p>
+                ) : (
+                  <div className="flex max-h-40 flex-col gap-1.5 overflow-y-auto rounded-lg border border-border p-2">
+                    {routeOptions.map((r) => (
+                      <label key={r.id} className="flex items-center gap-1.5 text-sm text-foreground">
+                        <input
+                          type="checkbox"
+                          className="size-4 rounded border-border"
+                          checked={couponForm.applicableRouteIds.includes(r.id)}
+                          onChange={() => toggleCouponRoute(r.id)}
+                        />
+                        {routeOptionLabel(r)}
+                      </label>
+                    ))}
+                  </div>
+                )}
+                <p className="mt-1 text-xs text-muted-foreground">{tl.applicableRoutesHelper}</p>
+              </div>
+
+              <label className="mt-3 flex items-center gap-2 text-sm text-foreground">
+                <input
+                  type="checkbox"
+                  checked={couponForm.firstTripOnly}
+                  onChange={(e) => setCouponForm((f) => ({ ...f, firstTripOnly: e.target.checked }))}
+                  className="size-4 rounded border-border"
+                />
+                {tl.firstTripOnly}
+              </label>
+
+              <label className="mt-2 flex items-center gap-2 text-sm text-foreground">
+                <input
+                  type="checkbox"
+                  checked={couponForm.registeredOnly}
+                  onChange={(e) => setCouponForm((f) => ({ ...f, registeredOnly: e.target.checked }))}
+                  className="size-4 rounded border-border"
+                />
+                {tl.registeredOnly}
+              </label>
+            </div>
 
             {couponFormError && <ErrorBanner message={couponFormError} />}
 

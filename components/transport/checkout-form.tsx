@@ -4,7 +4,7 @@ import { useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeftRight, Building, ChevronLeft, ChevronRight, CreditCard, Luggage, Smartphone } from "lucide-react"
-import { dictionary, displayFont, localizeNumber } from "@/lib/i18n"
+import { dictionary, displayFont, localizeNumber, type Lang } from "@/lib/i18n"
 import { normalizePhone, toLatinDigits } from "@/lib/phone-utils"
 import { useLang } from "@/lib/lang-context"
 import { cityLabel, formatTime, pricing } from "@/lib/booking-data"
@@ -24,6 +24,39 @@ type PayMethod = "card" | "mobile" | "office"
 // درگاه HesabPay‌اند (بخش ۲ سند مادر: «کارت بانکی یا پول موبایلی»).
 function toDbPaymentMethod(m: PayMethod): "online" | "offline" {
   return m === "office" ? "offline" : "online"
+}
+
+// ریزفاز ۵.۱۱.۱ — نگاشت reason برگشتی از API (که از پیام دقیق
+// confirm_booking می‌آید) به پیام قابل‌فهم برای مسافر. reason ناشناخته
+// یا خالی (مثلاً NOT_FOUND — کد اصلاً پیدا نشد/منقضی/غیرفعال) همان پیام
+// عمومی قبلی را نشان می‌دهد؛ فقط قوانین پیشرفتهٔ فاز ۵.۱۱ پیام اختصاصی
+// می‌گیرند.
+function couponReasonMessage(
+  reason: string | undefined,
+  reasonValue: string | undefined | null,
+  t: (typeof dictionary)[Lang],
+  lang: Lang,
+): string {
+  switch (reason) {
+    case "MIN_SEATS":
+      return t.checkout.couponMinSeats.replace("{n}", localizeNumber(reasonValue ?? "", lang))
+    case "MIN_AMOUNT":
+      return t.checkout.couponMinAmount
+        .replace("{n}", localizeNumber(Math.round(Number(reasonValue ?? 0)), lang))
+        .replace("{currency}", t.routes.currency)
+    case "ROUTE_NOT_ELIGIBLE":
+      return t.checkout.couponRouteNotEligible
+    case "REGISTERED_ONLY":
+      return t.checkout.couponRegisteredOnly
+    case "TIER_TOO_LOW":
+      return t.checkout.couponTierTooLow
+    case "FIRST_TRIP_ONLY":
+      return t.checkout.couponFirstTripOnly
+    case "PER_CUSTOMER_LIMIT":
+      return t.checkout.couponPerCustomerLimit
+    default:
+      return t.checkout.couponInvalid
+  }
 }
 
 export function CheckoutForm({ trip, seatIds }: { trip: TripDetail; seatIds: string[] }) {
@@ -47,7 +80,7 @@ export function CheckoutForm({ trip, seatIds }: { trip: TripDetail; seatIds: str
   const [payMethod, setPayMethod] = useState<PayMethod>("card")
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [errors, setErrors] = useState<Record<string, boolean>>({})
-  const [serverError, setServerError] = useState<"couponInvalid" | "holdExpired" | "genericError" | null>(null)
+  const [serverError, setServerError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   if (seatIds.length === 0) {
@@ -111,18 +144,18 @@ export function CheckoutForm({ trip, seatIds }: { trip: TripDetail; seatIds: str
       if (!res.ok) {
         if (body.error === "COUPON_INVALID") {
           setErrors((prev) => ({ ...prev, coupon: true }))
-          setServerError("couponInvalid")
+          setServerError(couponReasonMessage(body.reason, body.reasonValue, t, lang))
         } else if (body.error === "SEATS_NOT_HELD") {
-          setServerError("holdExpired")
+          setServerError(t.checkout.holdExpired)
         } else {
-          setServerError("genericError")
+          setServerError(t.checkout.genericError)
         }
         return
       }
 
       router.push(`/trips/${trip.id}/confirmation?ref=${encodeURIComponent(body.booking.booking_reference)}`)
     } catch {
-      setServerError("genericError")
+      setServerError(t.checkout.genericError)
     } finally {
       setSubmitting(false)
     }
@@ -401,7 +434,7 @@ export function CheckoutForm({ trip, seatIds }: { trip: TripDetail; seatIds: str
               </div>
             </dl>
 
-            {serverError && <p className="mt-3 text-xs text-destructive">{t.checkout[serverError]}</p>}
+            {serverError && <p className="mt-3 text-xs text-destructive">{serverError}</p>}
 
             <button
               type="submit"
@@ -434,7 +467,7 @@ export function CheckoutForm({ trip, seatIds }: { trip: TripDetail; seatIds: str
             {submitting ? t.checkout.submitting : t.checkout.pay}
           </button>
         </div>
-        {serverError && <p className="mt-1.5 text-center text-xs text-destructive">{t.checkout[serverError]}</p>}
+        {serverError && <p className="mt-1.5 text-center text-xs text-destructive">{serverError}</p>}
       </div>
     </div>
   )

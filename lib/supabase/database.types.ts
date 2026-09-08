@@ -297,42 +297,63 @@ export type Database = {
       }
       coupons: {
         Row: {
+          applicable_route_ids: string[] | null
           code: string
           created_at: string
           created_by_admin_id: string | null
           discount_type: Database["public"]["Enums"]["coupon_discount_type"]
           discount_value: number
+          first_trip_only: boolean
+          guest_allowed: boolean
           id: string
           is_active: boolean
           is_stackable_with_tier: boolean
+          min_amount: number | null
+          min_loyalty_tier_id: string | null
+          min_seats: number | null
+          per_customer_limit: number | null
           usage_limit: number | null
           used_count: number
           valid_from: string | null
           valid_to: string | null
         }
         Insert: {
+          applicable_route_ids?: string[] | null
           code: string
           created_at?: string
           created_by_admin_id?: string | null
           discount_type: Database["public"]["Enums"]["coupon_discount_type"]
           discount_value: number
+          first_trip_only?: boolean
+          guest_allowed?: boolean
           id?: string
           is_active?: boolean
           is_stackable_with_tier?: boolean
+          min_amount?: number | null
+          min_loyalty_tier_id?: string | null
+          min_seats?: number | null
+          per_customer_limit?: number | null
           usage_limit?: number | null
           used_count?: number
           valid_from?: string | null
           valid_to?: string | null
         }
         Update: {
+          applicable_route_ids?: string[] | null
           code?: string
           created_at?: string
           created_by_admin_id?: string | null
           discount_type?: Database["public"]["Enums"]["coupon_discount_type"]
           discount_value?: number
+          first_trip_only?: boolean
+          guest_allowed?: boolean
           id?: string
           is_active?: boolean
           is_stackable_with_tier?: boolean
+          min_amount?: number | null
+          min_loyalty_tier_id?: string | null
+          min_seats?: number | null
+          per_customer_limit?: number | null
           usage_limit?: number | null
           used_count?: number
           valid_from?: string | null
@@ -344,6 +365,13 @@ export type Database = {
             columns: ["created_by_admin_id"]
             isOneToOne: false
             referencedRelation: "admins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupons_min_loyalty_tier_id_fkey"
+            columns: ["min_loyalty_tier_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_tiers"
             referencedColumns: ["id"]
           },
         ]

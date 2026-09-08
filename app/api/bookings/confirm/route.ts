@@ -32,6 +32,12 @@ type ConfirmBody = {
 // یعنی تخفیف سطح باشگاه مشتریان و اتصال رزرو به تاریخچهٔ حساب کاربری از
 // همین حالا برای مسافران واردشده کار می‌کند؛ مهمان‌ها دقیقاً مثل قبل عمل
 // می‌کنند (customer_id همچنان null).
+//
+// ریزفاز ۵.۱۱.۱: confirm_booking() از فاز ۵.۱۱ به بعد پیام
+// 'COUPON_INVALID: <REASON>' (و برای دو قانون عددی، '...:<REASON>:<VALUE>')
+// raise می‌کند. اینجا آن را parse می‌کنیم و reason/reasonValue را هم به
+// چک‌اوت برمی‌گردانیم تا پیام دقیق («این کد فقط برای اولین سفرته») به
+// مسافر نشان داده شود، نه فقط «کد تخفیف نامعتبر است» عمومی.
 export async function POST(request: Request) {
   let body: ConfirmBody
   try {
@@ -102,18 +108,24 @@ export async function POST(request: Request) {
   })
 
   if (error) {
-    const knownErrors = [
-      "TRIP_NOT_FOUND",
-      "NO_SEATS_SELECTED",
-      "PASSENGER_COUNT_MISMATCH",
-      "SEATS_NOT_HELD",
-      "COUPON_INVALID",
-    ]
+    const knownErrors = ["TRIP_NOT_FOUND", "NO_SEATS_SELECTED", "PASSENGER_COUNT_MISMATCH", "SEATS_NOT_HELD"]
+
+    // COUPON_INVALID پیام‌های ریزتر هم دارد («COUPON_INVALID: MIN_SEATS:3»)
+    // که فاز ۵.۱۱.۱ برای نمایش دلیل دقیق رد کوپن به مسافر اضافه کرد؛ باید
+    // قبل از knownErrors ساده چک شود (وگرنه فقط با یک کد عمومی برمی‌گشت).
+    const couponMatch = error.message.match(/COUPON_INVALID:\s*([A-Z_]+)(?::([\d.]+))?/)
+    if (couponMatch) {
+      return NextResponse.json(
+        { error: "COUPON_INVALID", reason: couponMatch[1], reasonValue: couponMatch[2] ?? null },
+        { status: 400 },
+      )
+    }
+
     const code = knownErrors.find((c) => error.message.includes(c))
     if (code) {
       // SEATS_NOT_HELD یعنی مهلت قفل ۱۰ دقیقه‌ای گذشته یا صندلی از قبل رزرو
       // شده — کاربر باید به صفحهٔ انتخاب صندلی برگردد و دوباره انتخاب کند.
-      return NextResponse.json({ error: code }, { status: code === "COUPON_INVALID" ? 400 : 409 })
+      return NextResponse.json({ error: code }, { status: 409 })
     }
     console.error("[api/bookings/confirm]", error.message)
     return NextResponse.json({ error: "UNKNOWN" }, { status: 500 })
