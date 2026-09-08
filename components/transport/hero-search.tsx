@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { ArrowRightLeft, Info, MapPin, Search, Users } from "lucide-react"
+import { ArrowRightLeft, MapPin, Search } from "lucide-react"
 import type { Lang } from "@/lib/i18n"
 import { dictionary, displayFont } from "@/lib/i18n"
 import type { CityOption } from "@/lib/supabase/queries"
@@ -45,17 +45,21 @@ export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] 
           aria-hidden="true"
           className="size-full object-cover"
           priority
-          objectPosition="center 70%"
+          objectPosition="34% 62%"
           mobile={heroImages.mobile}
           tablet={heroImages.tablet}
           desktop={heroImages.desktop}
           wide={heroImages.wide}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/60 to-background" />
-        <div className="absolute inset-0 bg-gradient-to-r from-background/80 to-transparent rtl:bg-gradient-to-l" />
+        {/* عمودی: تیره‌ترین نقطه دقیقاً لبهٔ بالا (پشت کیکر) و لبهٔ پایین
+            (محو به رنگ solid پشت پنل جست‌وجو) است؛ نقطهٔ ۶۲٪ — همان لنگر
+            object-position بالا — عمداً کم‌رنگ‌ترین نقطه می‌ماند تا بس زیر
+            هیچ breakpoint ای پوشیده نشود. */}
+        <div className="absolute inset-0 bg-gradient-to-b from-background/55 from-[0%] via-background/8 via-[62%] to-background/88 to-[100%]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background/65 to-transparent rtl:bg-gradient-to-l" />
       </div>
 
-      <div className="mx-auto max-w-6xl px-5 pb-8 pt-8 sm:px-8 sm:pb-16 sm:pt-20 md:pb-20 md:pt-24 3xl:max-w-7xl 4xl:max-w-[110rem]">
+      <div className="mx-auto flex max-w-6xl flex-col justify-between gap-6 px-5 pb-8 pt-8 aspect-[1122/1402] sm:px-8 sm:pb-16 sm:pt-20 sm:gap-10 md:aspect-[1448/1086] md:pb-20 md:pt-24 lg:aspect-[1672/941] 3xl:aspect-[1915/821] 3xl:max-w-7xl 4xl:max-w-[110rem]">
         <div className="max-w-2xl animate-rise-in">
           <p className="mb-2.5 flex items-center gap-2 text-sm font-medium text-primary sm:mb-4">
             <span className="h-px w-8 bg-primary" aria-hidden="true" />
@@ -71,15 +75,10 @@ export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] 
 
         <form
           onSubmit={submit}
-          className="mt-5 animate-rise-in rounded-2xl border border-border bg-card/85 p-3.5 shadow-2xl shadow-black/40 backdrop-blur-md sm:mt-12 sm:p-5"
+          className="animate-rise-in rounded-2xl border border-border bg-card/85 p-3 shadow-2xl shadow-black/40 backdrop-blur-md sm:p-5"
           style={{ animationDelay: "120ms" }}
         >
-          <p className="mb-2.5 flex items-start gap-2 text-xs leading-relaxed text-muted-foreground sm:mb-3.5">
-            <Info className="mt-0.5 size-3.5 shrink-0 text-primary" />
-            {t.hero.helper}
-          </p>
-
-          <div className="grid gap-2.5 sm:gap-3 md:grid-cols-2 xl:grid-cols-[1fr_auto_1fr_1fr_auto] xl:items-end">
+          <div className="grid gap-2 sm:gap-3 md:grid-cols-2 xl:grid-cols-[1fr_auto_1fr_1fr_auto] xl:items-end">
             <div className="relative">
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                 {t.hero.origin}
@@ -136,11 +135,6 @@ export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] 
               <Search className="size-4" />
               {t.hero.search}
             </button>
-          </div>
-
-          <div className="mt-2 flex items-center gap-2 border-t border-border/60 pt-2 text-sm text-muted-foreground sm:mt-3 sm:pt-3">
-            <Users className="size-4" />
-            <span>1 {t.hero.passenger}</span>
           </div>
         </form>
       </div>

@@ -37,11 +37,21 @@ export const RESPONSIVE_IMAGE_SECTIONS: ResponsiveImageSection[] = [
     key: "hero",
     label: { fa: "هیرو صفحهٔ اصلی", en: "Homepage hero" },
     aspect: SHARED_ATMOSPHERIC_ASPECT,
+    // موقت (بازطراحی ریسپانسیو هیرو): از ۴ اسلات فعلی، فقط hero-road-dusk.png
+    // واقعاً همان بس/جادهٔ هیرو را نشان می‌دهد. mobile قبلاً به یک عکس جادهٔ
+    // بدون بس اشاره می‌کرد و tablet/wide به عکس‌های صفحهٔ درباره‌ما
+    // (about-corridor-dusk-*) که اصلاً بس ندارند — یعنی روی ۳ برش از ۴ برش،
+    // سوژهٔ اصلی هیرو اصلاً در تصویر وجود نداشت (مستقل از هر مشکل layout).
+    // تا رسیدن ۴ عکس نهاییِ اختصاصی هیرو (نام‌گذاری پیشنهادی: hero-mobile,
+    // hero-tablet, hero-desktop, hero-wide)، هر ۴ برش موقتاً به همین یک عکس
+    // واقعی هیرو اشاره می‌کنند؛ ResponsivePhoto با object-position مشترک
+    // (۳۴٪ افقی / ۶۲٪ عمودی — دقیقاً روی بس) هر ۴ نسبت تصویر را از همین یک
+    // فایل می‌سازد. جایگزینی بعدی این ۴ فایل هیچ تغییری در layout نمی‌خواهد.
     defaultSrc: {
-      mobile: "/images/hero-road-dusk-mobile.png",
-      tablet: "/images/about-corridor-dusk-tablet.png",
+      mobile: "/images/hero-road-dusk.png",
+      tablet: "/images/hero-road-dusk.png",
       desktop: "/images/hero-road-dusk.png",
-      wide: "/images/about-corridor-dusk-wide.png",
+      wide: "/images/hero-road-dusk.png",
     },
   },
   {
