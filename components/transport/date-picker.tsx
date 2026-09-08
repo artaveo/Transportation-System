@@ -52,10 +52,16 @@ export function DatePicker({
   lang,
   value,
   onChange,
+  variant = "boxed",
 }: {
   lang: Lang
   value: string
   onChange: (iso: string) => void
+  /** "boxed" (default) = own bordered/bg field, used everywhere except the
+   * new compact hero panel. "plain" = no border/bg, small label + inline
+   * icon/value — for sitting inside a shared divided card as one row among
+   * others. Purely visual; all date logic/behavior is identical either way. */
+  variant?: "boxed" | "plain"
 }) {
   const t = dictionary[lang]
   const today = useMemo(() => isoToday(), [])
@@ -325,31 +331,58 @@ export function DatePicker({
 
   return (
     <div ref={refs.setReference} className="relative">
-      <label className="mb-1.5 block text-xs font-medium text-muted-foreground">{t.hero.date}</label>
-      <button
-        type="button"
-        onClick={openPicker}
-        aria-label={t.hero.date}
-        className="absolute bottom-0 start-0 z-10 flex size-11 items-center justify-center text-muted-foreground hover:text-primary"
-      >
-        <CalendarIcon className="size-4" />
-      </button>
-      <input
-        type="text"
-        inputMode="numeric"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onBlur={commitText}
-        onFocus={openPicker}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault()
-            commitText()
-          }
-        }}
-        placeholder={system === "shamsi" ? "۱۴۰۵/۰۶/۱۲" : "2026-09-03"}
-        className={`${fieldBase} ps-11 pe-3 ${inputError ? "border-destructive" : "border-border"}`}
-      />
+      {variant === "plain" ? (
+        <>
+          <label className="block text-[11px] font-medium text-muted-foreground">{t.hero.date}</label>
+          <div className="mt-0.5 flex items-center gap-2">
+            <CalendarIcon className="size-4 shrink-0 text-primary" />
+            <input
+              type="text"
+              inputMode="numeric"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onBlur={commitText}
+              onFocus={openPicker}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault()
+                  commitText()
+                }
+              }}
+              placeholder={system === "shamsi" ? "۱۴۰۵/۰۶/۱۲" : "2026-09-03"}
+              className={`w-full truncate bg-transparent py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none ${inputError ? "text-destructive" : ""}`}
+            />
+          </div>
+        </>
+      ) : (
+        <>
+          <label className="mb-1.5 block text-xs font-medium text-muted-foreground">{t.hero.date}</label>
+          <button
+            type="button"
+            onClick={openPicker}
+            aria-label={t.hero.date}
+            className="absolute bottom-0 start-0 z-10 flex size-11 items-center justify-center text-muted-foreground hover:text-primary"
+          >
+            <CalendarIcon className="size-4" />
+          </button>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onBlur={commitText}
+            onFocus={openPicker}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault()
+                commitText()
+              }
+            }}
+            placeholder={system === "shamsi" ? "۱۴۰۵/۰۶/۱۲" : "2026-09-03"}
+            className={`${fieldBase} ps-11 pe-3 ${inputError ? "border-destructive" : "border-border"}`}
+          />
+        </>
+      )}
 
       {open &&
         typeof document !== "undefined" &&
