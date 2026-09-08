@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Award, BarChart3, BusFront, LayoutDashboard, ListFilter, LogOut, Map, Menu, Route as RouteIcon, ShieldCheck, Ticket, Users, X } from "lucide-react"
+import { Award, BarChart3, BusFront, FileText, LayoutDashboard, ListFilter, LogOut, Map, Menu, Route as RouteIcon, ShieldCheck, Ticket, Users, X } from "lucide-react"
 import { dictionary } from "@/lib/i18n"
 import { useLang } from "@/lib/lang-context"
 import { createClient } from "@/lib/supabase/client"
@@ -15,6 +15,8 @@ import { TripScheduler } from "@/components/admin/trip-scheduler"
 import { ReportsDashboard } from "@/components/admin/reports-dashboard"
 import { LoyaltyManager } from "@/components/admin/loyalty-manager"
 import { CityManager } from "@/components/admin/city-manager"
+import { SiteContentManager } from "@/components/admin/site-content-manager"
+import { ResponsiveImageManager } from "@/components/admin/responsive-image-manager"
 import { AdminManager } from "@/components/admin/admin-manager"
 
 // فاز ۵.۲: آخرین بازماندهٔ دادهٔ ساختگی (lib/admin-data.ts) هم حذف شد —
@@ -34,7 +36,20 @@ import { AdminManager } from "@/components/admin/admin-manager"
 // چون RLS این‌طور نوشته شده؛ bookings برای dashboard/reports هم لازم است
 // چون هر دو از جدول bookings می‌خوانند). تب «مدیریت ادمین‌ها» هیچ‌وقت از
 // طریق allowedSections قابل‌واگذاری نیست — همیشه فقط role==='super_admin'.
-type Tab = "dashboard" | "trips" | "bookings" | "buses" | "routes" | "cities" | "drivers" | "reports" | "loyalty" | "admins"
+//
+// فاز ۵.۱۳: تب «محتوای سایت» با بخش جدید 'content' اضافه شد (Public CMS Lite).
+type Tab =
+  | "dashboard"
+  | "trips"
+  | "bookings"
+  | "buses"
+  | "routes"
+  | "cities"
+  | "drivers"
+  | "reports"
+  | "loyalty"
+  | "content"
+  | "admins"
 
 const REQUIRED_SECTION: Partial<Record<Tab, string>> = {
   trips: "trips",
@@ -45,6 +60,7 @@ const REQUIRED_SECTION: Partial<Record<Tab, string>> = {
   cities: "routes",
   reports: "bookings",
   loyalty: "loyalty",
+  content: "content",
   // dashboard و admins عمداً اینجا نیستند: dashboard پیش‌فرض همیشه‌قابل‌مشاهده
   // است، admins جدا (پایین) فقط بر اساس role کنترل می‌شود.
 }
@@ -96,6 +112,7 @@ export function AdminPanel({
     { key: "cities", label: t.admin.nav.cities, icon: Map },
     { key: "reports", label: t.admin.nav.reports, icon: BarChart3 },
     { key: "loyalty", label: t.admin.nav.loyalty, icon: Award },
+    { key: "content", label: t.admin.nav.content, icon: FileText },
     { key: "admins", label: t.admin.nav.admins, icon: ShieldCheck },
   ]
 
@@ -209,6 +226,14 @@ export function AdminPanel({
           {tab === "cities" && <CityManager lang={lang} />}
           {tab === "reports" && <ReportsDashboard lang={lang} />}
           {tab === "loyalty" && <LoyaltyManager lang={lang} />}
+          {tab === "content" && (
+            <div className="flex flex-col gap-8">
+              <SiteContentManager lang={lang} />
+              <div className="border-t border-border/60 pt-8">
+                <ResponsiveImageManager lang={lang} />
+              </div>
+            </div>
+          )}
           {tab === "admins" && canOpenAdminsTab && <AdminManager lang={lang} viewerIsSuperAdmin={isSuperAdmin} />}
         </main>
       </div>

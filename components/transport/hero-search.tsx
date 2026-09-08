@@ -6,12 +6,16 @@ import { ArrowRightLeft, Info, MapPin, Search, Users } from "lucide-react"
 import type { Lang } from "@/lib/i18n"
 import { dictionary, displayFont } from "@/lib/i18n"
 import type { CityOption } from "@/lib/supabase/queries"
+import { useResponsiveImageSet } from "@/lib/hooks/use-responsive-image-set"
 import { DatePicker } from "./date-picker"
 import { ResponsivePhoto } from "../ui/responsive-photo"
 
 export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] }) {
   const t = dictionary[lang]
   const router = useRouter()
+  // فاز ۵.۱۴: عکس پس‌زمینه از پنل «عکس‌های چندبرشی» (اگر آپلود شده) وگرنه
+  // همان فایل استاتیک فعلی.
+  const heroImages = useResponsiveImageSet("hero")
   const [origin, setOrigin] = useState("")
   const [destination, setDestination] = useState("")
   const [date, setDate] = useState("")
@@ -42,10 +46,10 @@ export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] 
           className="size-full object-cover"
           priority
           objectPosition="center 70%"
-          mobile="/images/hero-road-dusk-mobile.png"
-          tablet="/images/about-corridor-dusk-tablet.png"
-          desktop="/images/hero-road-dusk.png"
-          wide="/images/about-corridor-dusk-wide.png"
+          mobile={heroImages.mobile}
+          tablet={heroImages.tablet}
+          desktop={heroImages.desktop}
+          wide={heroImages.wide}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/60 to-background" />
         <div className="absolute inset-0 bg-gradient-to-r from-background/80 to-transparent rtl:bg-gradient-to-l" />

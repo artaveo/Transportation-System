@@ -3,12 +3,16 @@
 import { Armchair, Clock, Luggage, Snowflake } from "lucide-react"
 import type { Lang } from "@/lib/i18n"
 import { dictionary, displayFont } from "@/lib/i18n"
+import { useResponsiveImageSet } from "@/lib/hooks/use-responsive-image-set"
 import { ResponsivePhoto } from "../ui/responsive-photo"
 
 const icons = [Snowflake, Luggage, Armchair, Clock]
 
 export function FleetFeatures({ lang }: { lang: Lang }) {
   const t = dictionary[lang]
+  // فاز ۵.۱۴: عکس پس‌زمینه از پنل «عکس‌های چندبرشی» (اگر آپلود شده) وگرنه
+  // همان فایل استاتیک فعلی.
+  const fleetImages = useResponsiveImageSet("fleet")
 
   return (
     <section id="fleet" className="relative isolate scroll-mt-16 overflow-hidden border-y border-border/60 bg-background py-16 sm:py-24">
@@ -31,10 +35,10 @@ export function FleetFeatures({ lang }: { lang: Lang }) {
           aria-hidden="true"
           className="size-full object-cover"
           objectPosition="center 70%"
-          mobile="/images/fleet-580-dusk-mobile.png"
-          tablet="/images/fleet-580-dusk-tablet.png"
-          desktop="/images/fleet-580-dusk.png"
-          wide="/images/fleet-580-dusk-wide.png"
+          mobile={fleetImages.mobile}
+          tablet={fleetImages.tablet}
+          desktop={fleetImages.desktop}
+          wide={fleetImages.wide}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-background/15 via-background/55 to-background" />
       </div>

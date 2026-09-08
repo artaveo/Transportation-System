@@ -570,6 +570,62 @@ export type Database = {
         }
         Relationships: []
       }
+      offices: {
+        Row: {
+          address_en: string | null
+          address_fa: string | null
+          city_id: string
+          created_at: string
+          display_order: number
+          hours_en: string | null
+          hours_fa: string | null
+          id: string
+          is_active: boolean
+          name_en: string
+          name_fa: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address_en?: string | null
+          address_fa?: string | null
+          city_id: string
+          created_at?: string
+          display_order?: number
+          hours_en?: string | null
+          hours_fa?: string | null
+          id?: string
+          is_active?: boolean
+          name_en: string
+          name_fa: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address_en?: string | null
+          address_fa?: string | null
+          city_id?: string
+          created_at?: string
+          display_order?: number
+          hours_en?: string | null
+          hours_fa?: string | null
+          id?: string
+          is_active?: boolean
+          name_en?: string
+          name_fa?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offices_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount: number
@@ -666,6 +722,30 @@ export type Database = {
           },
         ]
       }
+      responsive_site_images: {
+        Row: {
+          breakpoint: string
+          id: string
+          image_url: string
+          section_key: string
+          updated_at: string
+        }
+        Insert: {
+          breakpoint: string
+          id?: string
+          image_url: string
+          section_key: string
+          updated_at?: string
+        }
+        Update: {
+          breakpoint?: string
+          id?: string
+          image_url?: string
+          section_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       routes: {
         Row: {
           created_at: string
@@ -713,6 +793,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      site_settings: {
+        Row: {
+          about_buses_in_fleet: number | null
+          about_cities_covered: number | null
+          about_daily_trips: number | null
+          about_years_active: number | null
+          company_email: string | null
+          company_phone: string | null
+          fleet_photo_url: string | null
+          id: boolean
+          updated_at: string
+        }
+        Insert: {
+          about_buses_in_fleet?: number | null
+          about_cities_covered?: number | null
+          about_daily_trips?: number | null
+          about_years_active?: number | null
+          company_email?: string | null
+          company_phone?: string | null
+          fleet_photo_url?: string | null
+          id?: boolean
+          updated_at?: string
+        }
+        Update: {
+          about_buses_in_fleet?: number | null
+          about_cities_covered?: number | null
+          about_daily_trips?: number | null
+          about_years_active?: number | null
+          company_email?: string | null
+          company_phone?: string | null
+          fleet_photo_url?: string | null
+          id?: boolean
+          updated_at?: string
+        }
+        Relationships: []
       }
       trip_seats: {
         Row: {

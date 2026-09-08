@@ -2,8 +2,10 @@
 
 import Link from "next/link"
 import { BadgeCheck, Camera, ShieldCheck, Users } from "lucide-react"
-import { dictionary, displayFont } from "@/lib/i18n"
+import { dictionary, displayFont, localizeNumber } from "@/lib/i18n"
 import { useLang } from "@/lib/lang-context"
+import { useSiteSettings } from "@/lib/hooks/use-site-content"
+import { useResponsiveImageSet } from "@/lib/hooks/use-responsive-image-set"
 import { SiteHeader } from "./site-header"
 import { SiteFooter } from "./site-footer"
 import { FleetFeatures } from "./fleet-features"
@@ -13,6 +15,20 @@ import { ResponsivePhoto } from "../ui/responsive-photo"
 export function AboutPage() {
   const { lang } = useLang()
   const t = dictionary[lang]
+  const { settings } = useSiteSettings()
+
+  // فاز ۵.۱۳: هر عدد مستقل — اگر Zakir فقط بعضی از آمار را از پنل «محتوای
+  // سایت» پر کرده باشد، همان‌ها عدد واقعی نشان می‌دهند و بقیه همچنان «—»
+  // می‌مانند (طبق اصل no-fabrication، هیچ عدد ساختگی جای NULL نمی‌نشیند).
+  const aboutStatValues = [
+    settings?.about_years_active ?? null,
+    settings?.about_cities_covered ?? null,
+    settings?.about_buses_in_fleet ?? null,
+    settings?.about_daily_trips ?? null,
+  ]
+  const anyAboutStatMissing = aboutStatValues.some((v) => v === null)
+  // فاز ۵.۱۴: عکس پس‌زمینهٔ intro از پنل «عکس‌های چندبرشی» (اگر آپلود شده) وگرنه فایل استاتیک فعلی.
+  const aboutImages = useResponsiveImageSet("about")
 
   return (
     <div className="min-h-screen bg-background">
@@ -32,10 +48,10 @@ export function AboutPage() {
             aria-hidden="true"
             className="size-full object-cover"
             objectPosition="center 70%"
-            mobile="/images/about-corridor-dusk-mobile.png"
-            tablet="/images/about-corridor-dusk-tablet.png"
-            desktop="/images/about-corridor-dusk.png"
-            wide="/images/about-corridor-dusk-wide.png"
+            mobile={aboutImages.mobile}
+            tablet={aboutImages.tablet}
+            desktop={aboutImages.desktop}
+            wide={aboutImages.wide}
           />
           <div className="absolute inset-0 bg-gradient-to-b from-background/35 via-background/55 to-background/95" />
         </div>
@@ -65,16 +81,23 @@ export function AboutPage() {
       <section className="border-y border-border/60 bg-secondary/40 py-12">
         <div className="mx-auto max-w-5xl px-5 sm:px-8">
           <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
-            {t.about.stats.map((s) => (
-              <div key={s.label} className="text-center">
-                <p className={`${displayFont(lang)} text-3xl font-semibold text-muted-foreground sm:text-4xl`}>—</p>
-                <p className="mt-1.5 text-sm text-muted-foreground">{s.label}</p>
-              </div>
-            ))}
+            {t.about.stats.map((s, i) => {
+              const value = aboutStatValues[i]
+              return (
+                <div key={s.label} className="text-center">
+                  <p className={`${displayFont(lang)} text-3xl font-semibold ${value !== null ? "text-foreground" : "text-muted-foreground"} sm:text-4xl`}>
+                    {value !== null ? localizeNumber(value, lang) : "—"}
+                  </p>
+                  <p className="mt-1.5 text-sm text-muted-foreground">{s.label}</p>
+                </div>
+              )
+            })}
           </div>
-          <div className="mx-auto mt-6 max-w-md">
-            <PlaceholderBadge label={t.about.statsPlaceholderNote} />
-          </div>
+          {anyAboutStatMissing && (
+            <div className="mx-auto mt-6 max-w-md">
+              <PlaceholderBadge label={t.about.statsPlaceholderNote} />
+            </div>
+          )}
         </div>
       </section>
 
@@ -98,10 +121,20 @@ export function AboutPage() {
             {t.about.safetyTitle}
           </h2>
           <p className="mt-4 text-pretty leading-relaxed text-muted-foreground">{t.about.safetyBody}</p>
-          <div className="mt-6 flex items-center gap-2 rounded-xl border border-dashed border-border bg-card px-4 py-3 text-sm text-muted-foreground">
-            <Camera className="size-4 shrink-0 text-muted-foreground" />
-            {t.about.fleetPhotoNote}
-          </div>
+          {settings?.fleet_photo_url ? (
+            // فاز ۵.۱۳: عکس واقعی از پنل «محتوای سایت» به‌جای یادداشت placeholder.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={settings.fleet_photo_url}
+              alt=""
+              className="mt-6 aspect-video w-full rounded-xl border border-border object-cover"
+            />
+          ) : (
+            <div className="mt-6 flex items-center gap-2 rounded-xl border border-dashed border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+              <Camera className="size-4 shrink-0 text-muted-foreground" />
+              {t.about.fleetPhotoNote}
+            </div>
+          )}
         </div>
       </section>
 
