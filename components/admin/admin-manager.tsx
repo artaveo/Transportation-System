@@ -35,13 +35,18 @@ import {
  * دقیق «مدیر کل نمی‌تواند سوپرادمین بسازد/دست بزند» را در سطح دیتابیس
  * اجرا می‌کند — یعنی حتی با DevTools هم این مرزها دور زده نمی‌شوند.
  *
- * ۷ بخش (routes/fleet/trips/bookings/payments/loyalty/customers) دقیقاً
+ * ۷ بخش اولیه (routes/fleet/trips/bookings/payments/loyalty/customers) دقیقاً
  * همان‌هایی‌اند که has_admin_section() در فاز ۳.۲ از قبل روی جدول‌های
- * واقعی چک می‌کند — نه یک لیست جدید. دو مورد از این ۷ (routes هم
+ * واقعی چک می‌کند. دو مورد از این ۷ (routes هم
  * cities را می‌پوشاند چون RLS همین‌طور نوشته شده؛ bookings هم عملاً
  * دیدن داشبورد/گزارش‌ها را ممکن می‌کند چون آن دو تب از جدول bookings
  * می‌خوانند) — این نگاشت در متن sectionsHelper/برچسب هر بخش (lib/i18n.ts)
  * توضیح داده شده تا برای Zakir موقع تنظیم دسترسی یک ادمین محدود گیج‌کننده نباشد.
+ *
+ * فاز ۵.۱۳: بخش هشتم 'content' اضافه شد (جدول admins_allowed_sections_valid
+ * هم در همان migration به‌روزرسانی شده) — RLS جدول‌های site_settings/offices
+ * و همچنین سیاست‌های نوشتن روی bucket استوریج site-content همگی
+ * has_admin_section('content') را چک می‌کنند.
  *
  * ساخت ادمین جدید یک درخواست به app/api/admin/admins/route.ts می‌زند
  * (تنها جایی که واقعاً به service_role نیاز است: دعوت ایمیلی حساب Auth
@@ -51,7 +56,7 @@ import {
  * audit می‌رسد).
  */
 
-const SECTION_KEYS = ["routes", "fleet", "trips", "bookings", "payments", "loyalty", "customers"] as const
+const SECTION_KEYS = ["routes", "fleet", "trips", "bookings", "payments", "loyalty", "customers", "content"] as const
 type SectionKey = (typeof SECTION_KEYS)[number]
 
 type AdminRow = {

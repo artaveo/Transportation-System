@@ -4,22 +4,46 @@ import Link from "next/link"
 import { Bus, Mail, MapPin, Phone } from "lucide-react"
 import { dictionary, displayFont, localizeNumber } from "@/lib/i18n"
 import { useLang } from "@/lib/lang-context"
+import { useActiveOffices, useSiteSettings } from "@/lib/hooks/use-site-content"
 import { PlaceholderBadge } from "./placeholder-badge"
 
 export function SiteFooter() {
   const { lang } = useLang()
   const t = dictionary[lang]
+  const { offices: dbOffices } = useActiveOffices()
+  const { settings } = useSiteSettings()
+
+  // فاز ۵.۱۳: دفاتر حالا از جدول offices می‌آیند (پنل ادمین «محتوای سایت»)؛
+  // فقط اگر fetch شکست بخورد (dbOffices === null) به فهرست ثابت i18n برمی‌گردیم
+  // تا فوتر هیچ‌وقت کاملاً خالی نماند.
+  const officeSource =
+    dbOffices !== null
+      ? dbOffices.map((o) => ({
+          cityFa: o.city?.name_fa ?? "",
+          cityEn: o.city?.name_en ?? "",
+          nameFa: o.name_fa,
+          nameEn: o.name_en,
+        }))
+      : t.offices
 
   // Group the confirmed offices by city (in corridor order) so the footer
   // stays compact even with 11 real offices (Kabul x3, Kandahar x2, ...).
   const grouped: { city: string; offices: string[] }[] = []
-  for (const o of t.offices) {
+  for (const o of officeSource) {
     const cityLabel = lang === "fa" ? o.cityFa : o.cityEn
     const officeLabel = lang === "fa" ? o.nameFa : o.nameEn
     const existing = grouped.find((g) => g.city === cityLabel)
     if (existing) existing.offices.push(officeLabel)
     else grouped.push({ city: cityLabel, offices: [officeLabel] })
   }
+
+  const companyPhone = settings?.company_phone ?? null
+  const companyEmail = settings?.company_email ?? null
+
+  // فقط وقتی حداقل یک دفتر فعال هنوز آدرس/تلفن واقعی ندارد badge نشان بده —
+  // اگر Zakir همه را از پنل «محتوای سایت» تکمیل کرده باشد، دیگر لازم نیست.
+  const anyOfficeMissingDetails =
+    dbOffices === null || dbOffices.some((o) => !o.address_fa && !o.address_en && !o.phone)
 
   return (
     <footer id="offices" className="scroll-mt-16 border-t border-border/60 bg-background">
@@ -58,9 +82,11 @@ export function SiteFooter() {
                 </li>
               ))}
             </ul>
-            <div className="mt-3">
-              <PlaceholderBadge label={t.footer.officeDetailPlaceholder} />
-            </div>
+            {anyOfficeMissingDetails && (
+              <div className="mt-3">
+                <PlaceholderBadge label={t.footer.officeDetailPlaceholder} />
+              </div>
+            )}
           </div>
 
           {/* Quick links */}
@@ -90,15 +116,17 @@ export function SiteFooter() {
             <ul className="flex flex-col gap-3 text-sm text-muted-foreground">
               <li className="flex items-center gap-2">
                 <Phone className="size-4 text-primary" />
-                <span dir="ltr">{localizeNumber("+93 ??? ??? ???", lang)}</span>
+                <span dir="ltr">{companyPhone ? localizeNumber(companyPhone, lang) : localizeNumber("+93 ??? ??? ???", lang)}</span>
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="size-4 text-primary" />
-                <span dir="ltr">info@[placeholder-domain]</span>
+                <span dir="ltr">{companyEmail ?? "info@[placeholder-domain]"}</span>
               </li>
-              <li>
-                <PlaceholderBadge label={t.footer.contactPlaceholder} />
-              </li>
+              {(!companyPhone || !companyEmail) && (
+                <li>
+                  <PlaceholderBadge label={t.footer.contactPlaceholder} />
+                </li>
+              )}
             </ul>
           </div>
         </div>

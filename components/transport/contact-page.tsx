@@ -5,6 +5,7 @@ import { Building2, Clock, Mail, MapPin, Phone, Send } from "lucide-react"
 import { cities, dictionary, displayFont } from "@/lib/i18n"
 import { useLang } from "@/lib/lang-context"
 import { toLatinDigits } from "@/lib/phone-utils"
+import { useActiveOffices, useSiteSettings } from "@/lib/hooks/use-site-content"
 import { SiteHeader } from "./site-header"
 import { SiteFooter } from "./site-footer"
 import { PlaceholderBadge } from "./placeholder-badge"
@@ -12,6 +13,39 @@ import { PlaceholderBadge } from "./placeholder-badge"
 export function ContactPage() {
   const { lang } = useLang()
   const t = dictionary[lang]
+  const { offices: dbOffices } = useActiveOffices()
+  const { settings } = useSiteSettings()
+
+  // فاز ۵.۱۳: فهرست دفاتر از جدول offices (پنل «محتوای سایت»)؛ در صورت
+  // شکست fetch به فهرست ثابت i18n برمی‌گردیم تا صفحه خالی نماند.
+  const officeList =
+    dbOffices !== null
+      ? dbOffices.map((o) => ({
+          key: o.id,
+          nameFa: o.name_fa,
+          nameEn: o.name_en,
+          cityFa: o.city?.name_fa ?? "",
+          cityEn: o.city?.name_en ?? "",
+          addressFa: o.address_fa,
+          addressEn: o.address_en,
+          phone: o.phone,
+          hoursFa: o.hours_fa,
+          hoursEn: o.hours_en,
+        }))
+      : t.offices.map((o, i) => ({
+          key: `${o.cityEn}-${i}`,
+          nameFa: o.nameFa,
+          nameEn: o.nameEn,
+          cityFa: o.cityFa,
+          cityEn: o.cityEn,
+          addressFa: null as string | null,
+          addressEn: null as string | null,
+          phone: null as string | null,
+          hoursFa: null as string | null,
+          hoursEn: null as string | null,
+        }))
+
+  const anyOfficeMissingHours = officeList.some((o) => !o.hoursFa && !o.hoursEn)
 
   const [name, setName] = useState("")
   const [phone, setPhone] = useState("")
@@ -75,14 +109,16 @@ export function ContactPage() {
           <div>
             <h2 className="mb-4 flex items-center justify-between text-sm font-semibold text-foreground">
               <span>{t.contact.officesTitle}</span>
-              <PlaceholderBadge label={t.contact.hoursNote} />
+              {anyOfficeMissingHours && <PlaceholderBadge label={t.contact.hoursNote} />}
             </h2>
             <div className="flex flex-col gap-4 3xl:grid 3xl:grid-cols-2 3xl:items-start">
-              {t.offices.map((o, i) => {
+              {officeList.map((o) => {
                 const officeLabel = lang === "fa" ? o.nameFa : o.nameEn
                 const cityLabel = lang === "fa" ? o.cityFa : o.cityEn
+                const address = lang === "fa" ? o.addressFa : o.addressEn
+                const hours = lang === "fa" ? o.hoursFa : o.hoursEn
                 return (
-                  <div key={`${o.cityEn}-${i}`} className="rounded-2xl border border-border bg-card p-5">
+                  <div key={o.key} className="rounded-2xl border border-border bg-card p-5">
                     <div className="flex items-center gap-2">
                       <Building2 className="size-4 shrink-0 text-primary" />
                       <p className={`${displayFont(lang)} text-lg font-semibold text-foreground`}>{cityLabel}</p>
@@ -91,11 +127,17 @@ export function ContactPage() {
                     <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-border/60 pt-4 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1.5">
                         <MapPin className="size-3.5 text-primary" />
-                        <PlaceholderBadge label={t.footer.officeDetailPlaceholder} />
+                        {address ?? <PlaceholderBadge label={t.footer.officeDetailPlaceholder} />}
                       </span>
+                      {o.phone && (
+                        <span className="flex items-center gap-1.5" dir="ltr">
+                          <Phone className="size-3.5 text-primary" />
+                          {o.phone}
+                        </span>
+                      )}
                       <span className="flex items-center gap-1.5">
                         <Clock className="size-3.5 text-primary" />
-                        {t.contact.hours}
+                        {hours ?? t.contact.hours}
                       </span>
                     </div>
                   </div>
@@ -163,13 +205,13 @@ export function ContactPage() {
             )}
 
             <div className="mt-6 flex flex-col gap-2.5 border-t border-border/60 pt-5 text-sm text-muted-foreground">
-              <span className="flex items-center gap-2">
+              <span className="flex items-center gap-2" dir="ltr">
                 <Phone className="size-4 text-primary" />
-                {t.footer.contactPlaceholder}
+                {settings?.company_phone ?? t.footer.contactPlaceholder}
               </span>
-              <span className="flex items-center gap-2">
+              <span className="flex items-center gap-2" dir="ltr">
                 <Mail className="size-4 text-primary" />
-                {t.footer.contactPlaceholder}
+                {settings?.company_email ?? t.footer.contactPlaceholder}
               </span>
             </div>
           </div>
