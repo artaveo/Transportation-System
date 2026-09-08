@@ -2,8 +2,8 @@
 
 ## وضعیت سند
 
-**آخرین بازنگری:** ۷ سپتامبر ۲۰۲۶  
-**وضعیت پروژه:** فازهای ۱ تا ۵.۱۱ تکمیل شده‌اند؛ **فاز ۵.۱۲ گام بعدی است.**
+**آخرین بازنگری:** ۸ سپتامبر ۲۰۲۶  
+**وضعیت پروژه:** فازهای ۱ تا ۵.۱۲ تکمیل شده‌اند؛ **فاز ۵.۱۳ گام بعدی است.**
 
 این سند نقشه‌راه محصول و مهندسی پروژه است و وضعیت واقعی، جهت معماری، بدهی‌های شناخته‌شده، فازهای آینده و معیارهای تکمیل را ثبت می‌کند.
 
@@ -123,12 +123,13 @@ Phase 5.8     Booking-table operational columns           ✅
 Phase 5.9     مدیریت شهرها و ولایت‌ها                       ✅
 Phase 5.10    گزارش‌گیری و retention                        ✅
 Phase 5.11    Coupon پیشرفته                                ✅
+Phase 5.12    Limited Admin و Permission Center             ✅
 ```
 
 جزئیات کامل پیاده‌سازی هر یک از فازهای تکمیل‌شده (فایل‌های تغییریافته،
 تصمیمات فنی، اعتبارسنجی، بدهی باقی‌مانده) در سند مستقل همان فاز ثبت
 شده است: `PHASE-3.3-README.md`، `PHASE-4_1` تا `PHASE-4_5-README.md`،
-و `PHASE-5_1` تا `PHASE-5_11-README.md`. این سند (`ROAD-MAP.md`) عمداً
+و `PHASE-5_1` تا `PHASE-5_12-README.md`. این سند (`ROAD-MAP.md`) عمداً
 فقط وضعیت را نگه می‌دارد، نه جزئیات را — طبق بخش ۱۳.
 
 ---
@@ -157,29 +158,6 @@ Phase 5.11    Coupon پیشرفته                                ✅
 ---
 
 # 7. فازهای بعدی
-
-## Phase 5.12 — Limited Admin و Permission Center
-
-- section-level permissions
-- role-based access
-- server enforcement
-- UI visibility مطابق permission
-- audit تغییرات دسترسی
-
-**زمینهٔ آماده:** پایهٔ کامل از فاز ۳.۱/۳.۲ در دیتابیس هست: جدول
-`admins` ستون `role` (`super_admin`/`limited_admin`) و
-`allowed_sections text[]` دارد، تابع RLS کمکی `has_admin_section()` از
-قبل روی چند جدول (routes/fleet/trips/bookings/payments/loyalty/customers)
-فعال است. **چیزی که نیست:** هیچ UI برای ساختن/مدیریت ادمین محدود (فقط
-یک super_admin با اسکریپت SQL دستی بوت‌استرپ شده — فاز ۳.۳)، middleware
-فقط `is_admin()` عمومی چک می‌کند نه بخش‌های مجاز، sidebar
-(`admin-panel.tsx`) همیشه هر ۸ تب را بدون فیلتر نشان می‌دهد.
-
-**کار لازم:** تب «مدیریت ادمین‌ها» (فقط برای super_admin، با
-`is_super_admin()` گیت شود) + فیلترکردن `navItems` در `admin-panel.tsx`
-بر اساس `allowed_sections` ادمین لاگین‌شده + تصمیم دربارهٔ روش ساخت
-حساب Auth برای ادمین جدید (دعوت دستی از Supabase Dashboard مثل
-بوت‌استرپ اولیه، یا Admin API).
 
 ## Phase 5.13 — Public CMS Lite
 

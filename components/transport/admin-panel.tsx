@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Award, BarChart3, BusFront, LayoutDashboard, ListFilter, LogOut, Map, Menu, Route as RouteIcon, Ticket, Users, X } from "lucide-react"
+import { Award, BarChart3, BusFront, LayoutDashboard, ListFilter, LogOut, Map, Menu, Route as RouteIcon, ShieldCheck, Ticket, Users, X } from "lucide-react"
 import { dictionary } from "@/lib/i18n"
 import { useLang } from "@/lib/lang-context"
 import { createClient } from "@/lib/supabase/client"
@@ -15,6 +15,7 @@ import { TripScheduler } from "@/components/admin/trip-scheduler"
 import { ReportsDashboard } from "@/components/admin/reports-dashboard"
 import { LoyaltyManager } from "@/components/admin/loyalty-manager"
 import { CityManager } from "@/components/admin/city-manager"
+import { AdminManager } from "@/components/admin/admin-manager"
 
 // فاز ۵.۲: آخرین بازماندهٔ دادهٔ ساختگی (lib/admin-data.ts) هم حذف شد —
 // dashboard و tab «رزروها» حالا هر دو مستقیماً از bookings/trips/payments
@@ -23,9 +24,38 @@ import { CityManager } from "@/components/admin/city-manager"
 // فاز ۵.۴ مدیریت باشگاه مشتریان (سطوح/پاداش رفرال/کوپن) را در تب
 // «باشگاه مشتریان» اضافه کرد. فاز ۵.۹ تب «شهرها» را اضافه کرد: سوییچ
 // فعال/غیرفعال روی هر یک از ۳۴ ولایت (بدون نیاز به SQL دستی).
-type Tab = "dashboard" | "trips" | "bookings" | "buses" | "routes" | "cities" | "drivers" | "reports" | "loyalty"
+//
+// فاز ۵.۱۲: تا این فاز sidebar همیشه هر ۹ تب را بدون فیلتر نشان می‌داد —
+// هر ادمینی (حتی limited_admin) هر تب را می‌دید (اگرچه RLS خودِ داده را
+// پشت‌صحنه مسدود می‌کرد). حالا navItems بر اساس `allowedSections` ادمین
+// لاگین‌شده (پراپ سمت سرور از app/admin/page.tsx) فیلتر می‌شود؛ REQUIRED_SECTION
+// نگاشت هر تب به همان بخش‌هایی است که has_admin_section() در فاز ۳.۲ از
+// قبل روی جدول‌های واقعی چک می‌کند (routes همان بخش cities را هم می‌پوشاند
+// چون RLS این‌طور نوشته شده؛ bookings برای dashboard/reports هم لازم است
+// چون هر دو از جدول bookings می‌خوانند). تب «مدیریت ادمین‌ها» هیچ‌وقت از
+// طریق allowedSections قابل‌واگذاری نیست — همیشه فقط role==='super_admin'.
+type Tab = "dashboard" | "trips" | "bookings" | "buses" | "routes" | "cities" | "drivers" | "reports" | "loyalty" | "admins"
 
-export function AdminPanel() {
+const REQUIRED_SECTION: Partial<Record<Tab, string>> = {
+  trips: "trips",
+  bookings: "bookings",
+  buses: "fleet",
+  drivers: "fleet",
+  routes: "routes",
+  cities: "routes",
+  reports: "bookings",
+  loyalty: "loyalty",
+  // dashboard و admins عمداً اینجا نیستند: dashboard پیش‌فرض همیشه‌قابل‌مشاهده
+  // است، admins جدا (پایین) فقط بر اساس role کنترل می‌شود.
+}
+
+export function AdminPanel({
+  role,
+  allowedSections,
+}: {
+  role: "super_admin" | "limited_admin"
+  allowedSections: string[]
+}) {
   const { lang } = useLang()
   const t = dictionary[lang]
   const [tab, setTab] = useState<Tab>("dashboard")
@@ -39,7 +69,17 @@ export function AdminPanel() {
     router.refresh()
   }
 
-  const navItems: { key: Tab; label: string; icon: typeof LayoutDashboard }[] = [
+  const isSuperAdmin = role === "super_admin"
+
+  function canSeeTab(key: Tab): boolean {
+    if (key === "dashboard") return true
+    if (key === "admins") return isSuperAdmin
+    if (isSuperAdmin) return true
+    const required = REQUIRED_SECTION[key]
+    return required ? allowedSections.includes(required) : true
+  }
+
+  const allNavItems: { key: Tab; label: string; icon: typeof LayoutDashboard }[] = [
     { key: "dashboard", label: t.admin.nav.dashboard, icon: LayoutDashboard },
     { key: "trips", label: t.admin.nav.trips, icon: Ticket },
     { key: "bookings", label: t.admin.nav.bookings, icon: ListFilter },
@@ -49,7 +89,10 @@ export function AdminPanel() {
     { key: "cities", label: t.admin.nav.cities, icon: Map },
     { key: "reports", label: t.admin.nav.reports, icon: BarChart3 },
     { key: "loyalty", label: t.admin.nav.loyalty, icon: Award },
+    { key: "admins", label: t.admin.nav.admins, icon: ShieldCheck },
   ]
+
+  const navItems = allNavItems.filter((item) => canSeeTab(item.key))
 
   const NavList = (
     <nav className="flex flex-1 flex-col gap-1 px-3">
@@ -159,6 +202,7 @@ export function AdminPanel() {
           {tab === "cities" && <CityManager lang={lang} />}
           {tab === "reports" && <ReportsDashboard lang={lang} />}
           {tab === "loyalty" && <LoyaltyManager lang={lang} />}
+          {tab === "admins" && isSuperAdmin && <AdminManager lang={lang} />}
         </main>
       </div>
     </div>

@@ -2,6 +2,13 @@ import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
 const ADMIN_LOGIN_PATH = "/admin/login"
+// فاز ۵.۱۲: مسیر سوم برای ادمین (مثل ACCOUNT_SESSION_OPTIONAL_PATH پایین‌تر) —
+// وقتی یک ادمین محدود جدید دعوت می‌شود، رکورد admins او همان لحظه در دیتابیس
+// ساخته می‌شود (پس is_admin() از همان اول true است)، اما هنوز رمز عبور
+// ندارد. لینک دعوت ایمیل مستقیماً به همین صفحه با نشست موقت recovery-مانند
+// می‌رسد؛ middleware این یک مسیر را کاملاً دست‌نخورده رد می‌کند و خودِ
+// کامپوننت (AdminAcceptInvite) تشخیص «نشست معتبر دارد یا نه» را می‌دهد.
+const ADMIN_ACCEPT_INVITE_PATH = "/admin/accept-invite"
 const ACCOUNT_LOGIN_PATH = "/account/login"
 // این دو مسیر تنها صفحات /account/* هستند که بدون نشست هم باید باز شوند.
 // "/account/complete-profile" عمداً اینجا نیست: نیاز به نشست دارد (auth.uid()
@@ -60,6 +67,10 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
   if (pathname.startsWith("/admin")) {
+    if (pathname === ADMIN_ACCEPT_INVITE_PATH) {
+      return response
+    }
+
     const isLoginPage = pathname === ADMIN_LOGIN_PATH
 
     if (!user) {

@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_access_audit: {
+        Row: {
+          actor_auth_user_id: string | null
+          actor_full_name: string | null
+          change_type: string
+          id: string
+          new_value: Json | null
+          occurred_at: string
+          old_value: Json | null
+          target_admin_id: string
+        }
+        Insert: {
+          actor_auth_user_id?: string | null
+          actor_full_name?: string | null
+          change_type: string
+          id?: string
+          new_value?: Json | null
+          occurred_at?: string
+          old_value?: Json | null
+          target_admin_id: string
+        }
+        Update: {
+          actor_auth_user_id?: string | null
+          actor_full_name?: string | null
+          change_type?: string
+          id?: string
+          new_value?: Json | null
+          occurred_at?: string
+          old_value?: Json | null
+          target_admin_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_access_audit_target_admin_id_fkey"
+            columns: ["target_admin_id"]
+            isOneToOne: false
+            referencedRelation: "admins"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admins: {
         Row: {
           allowed_sections: string[] | null
@@ -890,6 +931,34 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
+      list_admin_audit_log: {
+        Args: { p_limit?: number }
+        Returns: {
+          actor_auth_user_id: string
+          actor_full_name: string
+          change_type: string
+          id: string
+          new_value: Json
+          occurred_at: string
+          old_value: Json
+          target_admin_id: string
+          target_full_name: string
+        }[]
+      }
+      list_admins_with_email: {
+        Args: never
+        Returns: {
+          allowed_sections: string[]
+          auth_user_id: string
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          is_active: boolean
+          last_sign_in_at: string
+          role: Database["public"]["Enums"]["admin_role"]
+        }[]
+      }
       normalize_phone: { Args: { p_input: string }; Returns: string }
       release_seats: {
         Args: { p_seat_ids: string[]; p_trip_id: string }
