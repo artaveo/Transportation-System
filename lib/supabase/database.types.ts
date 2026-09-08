@@ -59,6 +59,7 @@ export type Database = {
         Row: {
           allowed_sections: string[] | null
           auth_user_id: string | null
+          can_manage_admins: boolean
           created_at: string
           full_name: string
           id: string
@@ -68,6 +69,7 @@ export type Database = {
         Insert: {
           allowed_sections?: string[] | null
           auth_user_id?: string | null
+          can_manage_admins?: boolean
           created_at?: string
           full_name: string
           id?: string
@@ -77,6 +79,7 @@ export type Database = {
         Update: {
           allowed_sections?: string[] | null
           auth_user_id?: string | null
+          can_manage_admins?: boolean
           created_at?: string
           full_name?: string
           id?: string
@@ -883,6 +886,7 @@ export type Database = {
         Args: { p_booking_id: string }
         Returns: undefined
       }
+      can_manage_admins: { Args: never; Returns: boolean }
       confirm_booking: {
         Args: {
           p_contact_name: string
@@ -950,6 +954,7 @@ export type Database = {
         Returns: {
           allowed_sections: string[]
           auth_user_id: string
+          can_manage_admins: boolean
           created_at: string
           email: string
           full_name: string

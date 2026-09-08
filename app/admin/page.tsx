@@ -32,9 +32,15 @@ export default async function AdminPage() {
 
   const { data: adminRow } = await supabase
     .from("admins")
-    .select("role, allowed_sections")
+    .select("role, allowed_sections, can_manage_admins")
     .eq("auth_user_id", user.id)
     .single()
 
-  return <AdminPanel role={adminRow?.role ?? "limited_admin"} allowedSections={adminRow?.allowed_sections ?? []} />
+  return (
+    <AdminPanel
+      role={adminRow?.role ?? "limited_admin"}
+      allowedSections={adminRow?.allowed_sections ?? []}
+      canManageAdmins={adminRow?.can_manage_admins ?? false}
+    />
+  )
 }

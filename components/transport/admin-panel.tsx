@@ -52,9 +52,11 @@ const REQUIRED_SECTION: Partial<Record<Tab, string>> = {
 export function AdminPanel({
   role,
   allowedSections,
+  canManageAdmins,
 }: {
   role: "super_admin" | "limited_admin"
   allowedSections: string[]
+  canManageAdmins: boolean
 }) {
   const { lang } = useLang()
   const t = dictionary[lang]
@@ -70,10 +72,15 @@ export function AdminPanel({
   }
 
   const isSuperAdmin = role === "super_admin"
+  // فاز ۵.۱۲.۲: «مدیر کل» — limited_admin ای که can_manage_admins=true
+  // دارد. تب مدیریت ادمین‌ها برایش هم باز می‌شود، اما AdminManager با
+  // viewerIsSuperAdmin=false محدودیت‌های واقعی (که در دیتابیس هم توسط
+  // enforce_admin_management_boundaries اجرا می‌شود) را در UI هم اعمال می‌کند.
+  const canOpenAdminsTab = isSuperAdmin || canManageAdmins
 
   function canSeeTab(key: Tab): boolean {
     if (key === "dashboard") return true
-    if (key === "admins") return isSuperAdmin
+    if (key === "admins") return canOpenAdminsTab
     if (isSuperAdmin) return true
     const required = REQUIRED_SECTION[key]
     return required ? allowedSections.includes(required) : true
@@ -202,7 +209,7 @@ export function AdminPanel({
           {tab === "cities" && <CityManager lang={lang} />}
           {tab === "reports" && <ReportsDashboard lang={lang} />}
           {tab === "loyalty" && <LoyaltyManager lang={lang} />}
-          {tab === "admins" && isSuperAdmin && <AdminManager lang={lang} />}
+          {tab === "admins" && canOpenAdminsTab && <AdminManager lang={lang} viewerIsSuperAdmin={isSuperAdmin} />}
         </main>
       </div>
     </div>

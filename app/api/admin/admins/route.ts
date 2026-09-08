@@ -7,6 +7,7 @@ type InviteBody = {
   email?: string
   role?: "super_admin" | "limited_admin"
   allowedSections?: string[]
+  canManageAdmins?: boolean
 }
 
 const VALID_SECTIONS = ["routes", "fleet", "trips", "bookings", "payments", "loyalty", "customers"] as const
@@ -17,14 +18,18 @@ const VALID_SECTIONS = ["routes", "fleet", "trips", "bookings", "payments", "loy
 // دارد (بخش ۴ پرامپت مادر: «service-role فقط در server و با authorization
 // صریح»)، چون ساخت حساب Auth واقعی (auth.admin.inviteUserByEmail) یک
 // عملیات مدیریتی GoTrue است که با anon key ممکن نیست. درج ردیف جدول
-// admins عمداً با کلاینت anon+نشستِ خودِ super_admin درخواست‌دهنده انجام
-// می‌شود (نه service_role) — چون RLS policy admins_super_write (فاز ۳.۲)
-// از قبل این را برای super_admin مجاز کرده، و این‌طور تریگر audit
-// (log_admin_access_change، فاز ۵.۱۲) auth.uid() درست را می‌بیند (با
-// service_role هیچ auth.uid()ای وجود ندارد).
+// admins عمداً با کلاینت anon+نشستِ خودِ کاربر درخواست‌دهنده انجام
+// می‌شود (نه service_role) — چون RLS (admins_super_write برای super_admin،
+// admins_manager_insert برای مدیر کل — ریزفاز ۵.۱۲.۲) از قبل این را مجاز
+// کرده، و این‌طور تریگر audit (log_admin_access_change) و تریگر مرز
+// صلاحیت (enforce_admin_management_boundaries) هر دو auth.uid() درست را
+// می‌بینند — با service_role هیچ auth.uid()ای وجود ندارد.
 //
-// بررسی دوم سمت سرور (is_super_admin) عمداً اینجا هم تکرار می‌شود؛ همان
-// اصل «لایهٔ دفاعی دوم مکمل middleware» که در app/admin/page.tsx هست.
+// ریزفاز ۵.۱۲.۲: حالا هم super_admin هم «مدیر کل» (can_manage_admins=true)
+// می‌توانند اینجا ادمین محدود بسازند؛ فقط super_admin واقعی می‌تواند
+// role=super_admin بدهد یا can_manage_admins=true بدهد. بررسی‌های زیر
+// عمداً همان قانون تریگر دیتابیس را زودتر و با پیام روشن‌تر تکرار می‌کنند
+// (لایهٔ دفاعی دوم، نه جایگزین تریگر).
 export async function POST(request: Request) {
   let body: InviteBody
   try {
@@ -37,6 +42,7 @@ export async function POST(request: Request) {
   const email = body.email?.trim().toLowerCase()
   const role = body.role
   const allowedSections = Array.isArray(body.allowedSections) ? body.allowedSections : []
+  const requestedCanManageAdmins = body.canManageAdmins === true
 
   if (!fullName) {
     return NextResponse.json({ error: "MISSING_FULL_NAME" }, { status: 400 })
@@ -60,12 +66,39 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 })
   }
 
-  const { data: isSuperAdmin } = await authClient.rpc("is_super_admin")
-  if (!isSuperAdmin) {
+  const [{ data: isSuperAdmin }, { data: canManage }] = await Promise.all([
+    authClient.rpc("is_super_admin"),
+    authClient.rpc("can_manage_admins"),
+  ])
+
+  if (!canManage) {
     return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 })
+  }
+  // مدیر کل (can_manage_admins=true ولی role واقعی‌اش super_admin نیست)
+  // نه می‌تواند super_admin بسازد، نه می‌تواند پرچم can_manage_admins را
+  // به کسی بدهد — فقط یک super_admin واقعی این دو کار را می‌تواند.
+  if (!isSuperAdmin && role === "super_admin") {
+    return NextResponse.json({ error: "MANAGER_CANNOT_GRANT_SUPER_ADMIN" }, { status: 403 })
+  }
+  if (!isSuperAdmin && requestedCanManageAdmins) {
+    return NextResponse.json({ error: "MANAGER_CANNOT_GRANT_MANAGE_FLAG" }, { status: 403 })
   }
 
   const serviceClient = createServiceClient()
+
+  // ریزفاز ۵.۱۲.۱ — قبل از هرگونه دعوت، چک کن این ایمیل از قبل یک مسافر
+  // ثبت‌نام‌شده نیست (چک سریع سمت API؛ لایهٔ واقعی enforcement تریگر
+  // prevent_admin_customer_overlap روی خودِ جدول admins است — پایین‌تر).
+  const { data: existingCustomer } = await serviceClient
+    .from("customers")
+    .select("id")
+    .ilike("email", email)
+    .maybeSingle()
+
+  if (existingCustomer) {
+    return NextResponse.json({ error: "EMAIL_IS_CUSTOMER" }, { status: 409 })
+  }
+
   const origin = new URL(request.url).origin
 
   const { data: inviteData, error: inviteError } = await serviceClient.auth.admin.inviteUserByEmail(email, {
@@ -91,9 +124,10 @@ export async function POST(request: Request) {
       full_name: fullName,
       role,
       allowed_sections: role === "limited_admin" ? allowedSections : null,
+      can_manage_admins: role === "limited_admin" ? requestedCanManageAdmins : false,
       is_active: true,
     })
-    .select("id, full_name, role, allowed_sections, is_active, created_at")
+    .select("id, full_name, role, allowed_sections, can_manage_admins, is_active, created_at")
     .single()
 
   if (insertError) {
@@ -108,6 +142,15 @@ export async function POST(request: Request) {
 
     if (insertError.code === "23505") {
       return NextResponse.json({ error: "EMAIL_ALREADY_REGISTERED" }, { status: 409 })
+    }
+    if (insertError.message?.includes("AUTH_USER_ALREADY_CUSTOMER")) {
+      return NextResponse.json({ error: "EMAIL_IS_CUSTOMER" }, { status: 409 })
+    }
+    if (insertError.message?.includes("MANAGER_CANNOT_GRANT_SUPER_ADMIN")) {
+      return NextResponse.json({ error: "MANAGER_CANNOT_GRANT_SUPER_ADMIN" }, { status: 403 })
+    }
+    if (insertError.message?.includes("MANAGER_CANNOT_GRANT_MANAGE_FLAG")) {
+      return NextResponse.json({ error: "MANAGER_CANNOT_GRANT_MANAGE_FLAG" }, { status: 403 })
     }
     console.error("[api/admin/admins] admins insert error:", insertError.message)
     return NextResponse.json({ error: "INSERT_FAILED" }, { status: 500 })
