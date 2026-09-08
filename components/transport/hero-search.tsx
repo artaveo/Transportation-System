@@ -34,6 +34,9 @@ export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] 
     router.push(`/search?${params.toString()}`)
   }
 
+  const fieldBase =
+    "w-full rounded-xl border border-border bg-background/60 py-3 text-foreground transition-colors focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+
   return (
     <section className="relative isolate">
       <div className="absolute inset-x-0 top-0 -z-10 aspect-[1122/1402] md:aspect-[1448/1086] lg:aspect-[1672/941] 3xl:aspect-[1915/821]">
@@ -58,86 +61,76 @@ export function HeroSearch({ lang, cities }: { lang: Lang; cities: CityOption[] 
 
       <div className="mx-auto flex max-w-6xl flex-col justify-between gap-6 px-5 pb-8 pt-8 aspect-[1122/1402] sm:px-8 sm:pb-16 sm:pt-20 sm:gap-10 md:aspect-[1448/1086] md:pb-20 md:pt-24 lg:aspect-[1672/941] 3xl:aspect-[1915/821] 3xl:max-w-7xl 4xl:max-w-[110rem]">
         <div className="max-w-2xl animate-rise-in">
-          <p className="mb-2.5 hidden items-center gap-2 text-sm font-medium text-primary sm:mb-4 sm:flex">
+          <p className="mb-2.5 flex items-center gap-2 text-sm font-medium text-primary sm:mb-4">
             <span className="h-px w-8 bg-primary" aria-hidden="true" />
             {t.hero.kicker}
           </p>
-          <h1 className={`break-words ${displayFont(lang)} text-2xl font-semibold leading-[1.15] tracking-tight text-foreground sm:text-5xl sm:leading-[1.1] lg:text-6xl`}>
+          <h1 className={`break-words ${displayFont(lang)} text-3xl font-semibold leading-[1.1] tracking-tight text-foreground sm:text-5xl lg:text-6xl`}>
             {t.hero.title}
           </h1>
-          <p className="mt-2 max-w-xl text-pretty text-sm leading-relaxed text-muted-foreground sm:mt-5 sm:text-lg">
+          <p className="mt-3 max-w-xl text-pretty text-sm leading-relaxed text-muted-foreground sm:mt-5 sm:text-lg">
             {t.hero.subtitle}
           </p>
         </div>
 
         <form
           onSubmit={submit}
-          className="animate-rise-in overflow-hidden rounded-2xl border border-border bg-card/85 shadow-2xl shadow-black/40 backdrop-blur-md"
+          className="animate-rise-in rounded-2xl border border-border bg-card/85 p-3 shadow-2xl shadow-black/40 backdrop-blur-md sm:p-5"
           style={{ animationDelay: "120ms" }}
         >
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr_1fr_auto] lg:items-stretch">
-            <div className="relative order-3 border-b border-border/60 px-4 py-2.5 lg:order-none lg:border-b-0 lg:border-e lg:px-5 lg:py-3">
-              <label htmlFor="hero-origin" className="block text-[11px] font-medium text-muted-foreground">
+          <div className="grid gap-2 sm:gap-3 md:grid-cols-2 xl:grid-cols-[1fr_auto_1fr_1fr_auto] xl:items-end">
+            <div className="relative">
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                 {t.hero.origin}
               </label>
-              <div className="mt-0.5 flex items-center gap-2">
-                <MapPin className="size-4 shrink-0 text-primary" />
-                <select
-                  id="hero-origin"
-                  value={origin}
-                  onChange={(e) => setOrigin(e.target.value)}
-                  className="w-full truncate appearance-none bg-transparent py-1.5 text-sm text-foreground focus-visible:outline-none"
-                >
-                  <option value="">{t.hero.originPlaceholder}</option>
-                  {cities.map((c) => (
-                    <option key={c.id} value={c.nameEn}>
-                      {lang === "fa" ? c.nameFa : c.nameEn}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="order-4 flex items-center justify-center py-1 lg:order-none lg:py-0">
-              <button
-                type="button"
-                onClick={swap}
-                className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border bg-background text-primary transition-transform hover:rotate-180 hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                aria-label={t.hero.swap}
+              <MapPin className="pointer-events-none absolute bottom-3.5 start-3 size-4 text-primary" />
+              <select
+                value={origin}
+                onChange={(e) => setOrigin(e.target.value)}
+                className={`${fieldBase} appearance-none ps-9 pe-3`}
               >
-                <ArrowRightLeft className="size-4" />
-              </button>
-            </div>
-
-            <div className="relative order-5 px-4 py-2.5 lg:order-none lg:border-e lg:border-border/60 lg:px-5 lg:py-3">
-              <label htmlFor="hero-destination" className="block text-[11px] font-medium text-muted-foreground">
-                {t.hero.destination}
-              </label>
-              <div className="mt-0.5 flex items-center gap-2">
-                <MapPin className="size-4 shrink-0 text-accent" />
-                <select
-                  id="hero-destination"
-                  value={destination}
-                  onChange={(e) => setDestination(e.target.value)}
-                  className="w-full truncate appearance-none bg-transparent py-1.5 text-sm text-foreground focus-visible:outline-none"
-                >
-                  <option value="">{t.hero.destinationPlaceholder}</option>
-                  {cities.map((c) => (
-                    <option key={c.id} value={c.nameEn}>
-                      {lang === "fa" ? c.nameFa : c.nameEn}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="order-2 border-b border-border/60 px-4 py-2.5 lg:order-none lg:border-b-0 lg:border-e lg:px-5 lg:py-3">
-              <DatePicker lang={lang} value={date} onChange={setDate} variant="plain" />
+                <option value="">{t.hero.originPlaceholder}</option>
+                {cities.map((c) => (
+                  <option key={c.id} value={c.nameEn}>
+                    {lang === "fa" ? c.nameFa : c.nameEn}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <button
+              type="button"
+              onClick={swap}
+              className="flex size-10 shrink-0 items-center justify-center self-center justify-self-center rounded-full border border-border bg-background text-primary transition-transform hover:rotate-180 hover:border-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:col-span-2 xl:col-span-1 xl:mb-1"
+              aria-label={t.hero.swap}
+            >
+              <ArrowRightLeft className="size-4" />
+            </button>
+
+            <div className="relative">
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                {t.hero.destination}
+              </label>
+              <MapPin className="pointer-events-none absolute bottom-3.5 start-3 size-4 text-accent" />
+              <select
+                value={destination}
+                onChange={(e) => setDestination(e.target.value)}
+                className={`${fieldBase} appearance-none ps-9 pe-3`}
+              >
+                <option value="">{t.hero.destinationPlaceholder}</option>
+                {cities.map((c) => (
+                  <option key={c.id} value={c.nameEn}>
+                    {lang === "fa" ? c.nameFa : c.nameEn}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <DatePicker lang={lang} value={date} onChange={setDate} />
+
+            <button
               type="submit"
-              className="order-1 flex h-12 items-center justify-center gap-2 border-b border-border/60 bg-primary px-6 font-semibold text-primary-foreground transition-colors hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring lg:order-none lg:h-auto lg:border-b-0 lg:border-e-0"
+              className="flex h-[46px] items-center justify-center gap-2 rounded-xl bg-primary px-6 font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:col-span-2 xl:col-span-1"
             >
               <Search className="size-4" />
               {t.hero.search}
