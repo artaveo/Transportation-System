@@ -26,12 +26,30 @@ export function LangProvider({
   const [lang, setLangState] = useState<Lang>(initialLang)
 
   // Keep <html> direction/lang and storage in sync with the current language.
+  // این افکت روی همهٔ صفحات (چون LangProvider دور کل <body> است) در همان
+  // اولین هیدریت اجرا می‌شود؛ اگر مرورگر localStorage/cookie را مسدود کرده
+  // باشد (حالت خصوصی سخت‌گیرانه، «Block all cookies»، پالیسی سازمانی، …)
+  // بدون try/catch یک SecurityError پرتاب می‌شد که — چون هیچ app/error.tsx
+  // ای در پروژه نبود — کل هیدریت React را برای کل سایت می‌ترکاند: HTML سمت
+  // سرور همچنان نمایش داده می‌شد (ظاهر صفحه سالم به نظر می‌رسید) اما هیچ
+  // event handler ای (از جمله دکمهٔ جستجوی هیرو) دیگر attach نمی‌شد. همان
+  // ریسکی که در lib/pending-profile.ts قبلاً شناسایی و try/catch شده بود،
+  // اینجا رعایت نشده بود.
   useEffect(() => {
     document.documentElement.lang = lang === "fa" ? "fa-AF" : "en"
     document.documentElement.dir = dictionary[lang].dir
-    window.localStorage.setItem("shabraw-lang", lang)
+    try {
+      window.localStorage.setItem("shabraw-lang", lang)
+    } catch {
+      // بی‌ضرر — localStorage صرفاً برای همگام‌سازی بین تب‌هاست؛ کوکی زیر
+      // (اگر آن هم مسدود باشد) تنها روی رندر اولیهٔ لود بعدی اثر می‌گذارد.
+    }
     // کوکی هم موازی نوشته می‌شود تا رندر سرور بعدی (لود بعدی صفحه) هم درست باشد.
-    document.cookie = `${LANG_COOKIE_NAME}=${lang}; path=/; max-age=31536000; SameSite=Lax`
+    try {
+      document.cookie = `${LANG_COOKIE_NAME}=${lang}; path=/; max-age=31536000; SameSite=Lax`
+    } catch {
+      // بی‌ضرر — فقط یعنی زبان پیش‌فرض لود بعدی از کوکی خوانده نمی‌شود.
+    }
   }, [lang])
 
   // اگر یک تب دیگر زبان را عوض کند، این تب هم همگام شود (localStorage همچنان
