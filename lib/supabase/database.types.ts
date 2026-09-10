@@ -150,6 +150,7 @@ export type Database = {
           customer_id: string | null
           id: string
           payment_method: Database["public"]["Enums"]["payment_method"]
+          refunded_at: string | null
           seats_count: number
           service_fee_amount: number
           status: Database["public"]["Enums"]["booking_status"]
@@ -172,6 +173,7 @@ export type Database = {
           customer_id?: string | null
           id?: string
           payment_method: Database["public"]["Enums"]["payment_method"]
+          refunded_at?: string | null
           seats_count: number
           service_fee_amount?: number
           status?: Database["public"]["Enums"]["booking_status"]
@@ -194,6 +196,7 @@ export type Database = {
           customer_id?: string | null
           id?: string
           payment_method?: Database["public"]["Enums"]["payment_method"]
+          refunded_at?: string | null
           seats_count?: number
           service_fee_amount?: number
           status?: Database["public"]["Enums"]["booking_status"]
@@ -626,6 +629,60 @@ export type Database = {
           },
         ]
       }
+      payment_status_events: {
+        Row: {
+          actor_id: string | null
+          actor_type: string
+          booking_id: string
+          from_status: Database["public"]["Enums"]["payment_status"] | null
+          id: string
+          note: string | null
+          occurred_at: string
+          payment_id: string
+          source: string
+          to_status: Database["public"]["Enums"]["payment_status"]
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_type: string
+          booking_id: string
+          from_status?: Database["public"]["Enums"]["payment_status"] | null
+          id?: string
+          note?: string | null
+          occurred_at?: string
+          payment_id: string
+          source: string
+          to_status: Database["public"]["Enums"]["payment_status"]
+        }
+        Update: {
+          actor_id?: string | null
+          actor_type?: string
+          booking_id?: string
+          from_status?: Database["public"]["Enums"]["payment_status"] | null
+          id?: string
+          note?: string | null
+          occurred_at?: string
+          payment_id?: string
+          source?: string
+          to_status?: Database["public"]["Enums"]["payment_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_status_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_status_events_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount: number
@@ -633,9 +690,16 @@ export type Database = {
           confirmed_at: string | null
           confirmed_by_admin_id: string | null
           created_at: string
+          failure_reason: string | null
           id: string
+          idempotency_key: string | null
           method: Database["public"]["Enums"]["payment_method"]
+          provider: string
           provider_reference: string | null
+          raw_response: Json | null
+          refund_reason: string | null
+          refunded_at: string | null
+          refunded_by_admin_id: string | null
           status: Database["public"]["Enums"]["payment_status"]
         }
         Insert: {
@@ -644,9 +708,16 @@ export type Database = {
           confirmed_at?: string | null
           confirmed_by_admin_id?: string | null
           created_at?: string
+          failure_reason?: string | null
           id?: string
+          idempotency_key?: string | null
           method: Database["public"]["Enums"]["payment_method"]
+          provider?: string
           provider_reference?: string | null
+          raw_response?: Json | null
+          refund_reason?: string | null
+          refunded_at?: string | null
+          refunded_by_admin_id?: string | null
           status?: Database["public"]["Enums"]["payment_status"]
         }
         Update: {
@@ -655,9 +726,16 @@ export type Database = {
           confirmed_at?: string | null
           confirmed_by_admin_id?: string | null
           created_at?: string
+          failure_reason?: string | null
           id?: string
+          idempotency_key?: string | null
           method?: Database["public"]["Enums"]["payment_method"]
+          provider?: string
           provider_reference?: string | null
+          raw_response?: Json | null
+          refund_reason?: string | null
+          refunded_at?: string | null
+          refunded_by_admin_id?: string | null
           status?: Database["public"]["Enums"]["payment_status"]
         }
         Relationships: [
@@ -671,6 +749,13 @@ export type Database = {
           {
             foreignKeyName: "payments_confirmed_by_admin_id_fkey"
             columns: ["confirmed_by_admin_id"]
+            isOneToOne: false
+            referencedRelation: "admins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_refunded_by_admin_id_fkey"
+            columns: ["refunded_by_admin_id"]
             isOneToOne: false
             referencedRelation: "admins"
             referencedColumns: ["id"]
@@ -1002,6 +1087,10 @@ export type Database = {
         Args: { p_booking_id: string }
         Returns: undefined
       }
+      admin_refund_payment: {
+        Args: { p_booking_id: string; p_reason?: string }
+        Returns: undefined
+      }
       can_manage_admins: { Args: never; Returns: boolean }
       confirm_booking: {
         Args: {
@@ -1079,6 +1168,19 @@ export type Database = {
           last_sign_in_at: string
           role: Database["public"]["Enums"]["admin_role"]
         }[]
+      }
+      log_payment_status_event: {
+        Args: {
+          p_actor_id: string
+          p_actor_type: string
+          p_booking_id: string
+          p_from_status: Database["public"]["Enums"]["payment_status"]
+          p_note?: string
+          p_payment_id: string
+          p_source: string
+          p_to_status: Database["public"]["Enums"]["payment_status"]
+        }
+        Returns: undefined
       }
       normalize_phone: { Args: { p_input: string }; Returns: string }
       release_seats: {

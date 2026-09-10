@@ -2,8 +2,9 @@
 
 ## وضعیت سند
 
-**آخرین بازنگری:** ۸ سپتامبر ۲۰۲۶  
-**وضعیت پروژه:** فازهای ۱ تا ۵.۱۴ تکمیل شده‌اند؛ **فاز ۵.۱۵ گام بعدی است.**
+**آخرین بازنگری:** ۹ سپتامبر ۲۰۲۶  
+**وضعیت پروژه:** فازهای ۱ تا ۵.۱۴ و فاز ۶.۱ (زیرساخت پرداخت) تکمیل شده‌اند؛
+**فاز ۵.۱۵ (تعریف‌نشده) و فاز ۶.۲/۶.۳ (HesabPay واقعی) گام‌های بعدی‌اند.**
 
 این سند نقشه‌راه محصول و مهندسی پروژه است و وضعیت واقعی، جهت معماری، بدهی‌های شناخته‌شده، فازهای آینده و معیارهای تکمیل را ثبت می‌کند.
 
@@ -163,9 +164,10 @@ Phase 5.14    Responsive Image CMS (کراپ درون‌سایتی)          ✅
 
 فاز ۵.۱۳ (Public CMS Lite) و فاز ۵.۱۴ (Responsive Image CMS — کراپ
 درون‌سایتی برای عکس‌های چندبرشی هیرو/ناوگان/درباره‌ما) هر دو تکمیل شدند —
-جزئیات در `PHASE-5_13-README.md` و `PHASE-5_14-README.md`. فاز ۵.۱۵ هنوز
-تعریف نشده؛ scope آن باید قبل از شروع کد با Zakir مشخص شود (طبق همان قاعدهٔ
-بخش ۷).
+جزئیات در `PHASE-5_13-README.md` و `PHASE-5_14-README.md`. فاز ۵.۱۵ فعلاً
+عمداً کنار گذاشته شده (تصمیم Zakir: بعداً سراغش می‌رویم)؛ scope آن هنوز
+تعریف نشده و باید قبل از شروع کد با Zakir مشخص شود (طبق همان قاعدهٔ بخش ۷).
+در همین حین، فاز ۶.۱ (زیرساخت پرداخت — بخش ۸ پایین) به جای آن انجام شد.
 
 ---
 
@@ -173,17 +175,26 @@ Phase 5.14    Responsive Image CMS (کراپ درون‌سایتی)          ✅
 
 ## Phase 6 — Payment & Financial Transaction Core
 
-- payment provider abstraction
+### فاز ۶.۱ — زیرساخت (تکمیل — ۹ سپتامبر ۲۰۲۶، بدون اتصال واقعی HesabPay)
+
+- payment state machine ✅ (تریگر سطح دیتابیس؛ گذارهای مجاز: pending→confirmed/failed، confirmed→refunded)
+- payment audit trail ✅ (جدول `payment_status_events`، از این تاریخ به بعد)
+- idempotency — فقط ستون‌های آماده (`idempotency_key`)؛ هیچ مسیری هنوز پرش نمی‌کند (نیازمند provider واقعی)
+- refund ✅ (`admin_refund_payment` — فقط بازپرداخت دستی/کامل؛ بازپرداخت جزئی و اثر روی wallet/coupon هنوز تصمیم‌گیری نشده)
+- payment provider abstraction ✅ (`lib/payments/provider.ts` — فقط `ManualPaymentProvider`؛ `HesabPayProvider` در ۶.۳)
+
+جزئیات کامل در `PHASE-6_1-README.md`.
+
+### فاز ۶.۲ — تعریف‌نشده (هنوز با Zakir مشخص نشده)
+
+### فاز ۶.۳ — اتصال واقعی HesabPay
+
 - HesabPay integration
-- payment state machine
-- idempotency
 - webhook validation
 - duplicate/late callback handling
-- refund
 - reconciliation
-- payment audit trail
 
-**Requires stakeholder confirmation:** قراردادهای واقعی payment provider، callback behavior، fee model و refund policy.
+**Requires stakeholder confirmation:** قراردادهای واقعی payment provider، callback behavior، fee model و refund policy (شامل بازپرداخت جزئی و اثر آن روی wallet/coupon).
 
 ## Phase 7 — Notifications
 

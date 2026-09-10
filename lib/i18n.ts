@@ -832,6 +832,9 @@ export const dictionary = {
         cancelBooking: "لغو رزرو",
         cancelBookingConfirmTitle: "رزرو لغو شود؟",
         cancelBookingConfirmBody: "این رزرو لغو می‌شود و چوکی‌های آن به‌حالت خالی برمی‌گردند.",
+        refundPayment: "بازپرداخت",
+        refundPaymentConfirmTitle: "این پرداخت بازپرداخت شود؟",
+        refundPaymentConfirmBody: "چوکی‌های این رزرو به‌حالت خالی برمی‌گردند و رزرو به «بازپرداخت‌شده» تغییر می‌کند. این عمل قابل بازگشت نیست.",
       },
       reportsPanel: {
         title: "گزارش‌گیری آماری",
@@ -1893,6 +1896,9 @@ export const dictionary = {
         cancelBooking: "Cancel booking",
         cancelBookingConfirmTitle: "Cancel this booking?",
         cancelBookingConfirmBody: "This booking will be cancelled and its seats released back to available.",
+        refundPayment: "Refund",
+        refundPaymentConfirmTitle: "Refund this payment?",
+        refundPaymentConfirmBody: "This booking's seats will be released back to available and the booking marked as refunded. This can't be undone.",
       },
       reportsPanel: {
         title: "Statistical reports",

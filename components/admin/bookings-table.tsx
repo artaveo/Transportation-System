@@ -1,15 +1,15 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { CheckCircle2, Loader2, Search, XCircle } from "lucide-react"
+import { CheckCircle2, Loader2, RotateCcw, Search, XCircle } from "lucide-react"
 import { dictionary, localizeNumber, type Lang } from "@/lib/i18n"
 import { cityLabel } from "@/lib/booking-data"
 import { createClient } from "@/lib/supabase/client"
+import { createManualPaymentProvider } from "@/lib/payments/provider"
+import type { PaymentMethod, PaymentStatus } from "@/lib/payments/types"
 import { ConfirmDialog, EmptyState, ErrorBanner, LoadingRows, ScrollFade, iconBtnClass } from "./admin-ui"
 
 type BookingStatus = "pending" | "confirmed" | "completed" | "cancelled" | "refunded"
-type PaymentStatus = "pending" | "confirmed" | "failed" | "refunded"
-type PaymentMethod = "online" | "offline"
 
 type CityRef = { name_en: string; name_fa: string }
 
@@ -44,10 +44,21 @@ function unwrap<T>(v: T | T[] | null): T | null {
  * `bookings` است (طبق نگرانی صریح Zakir: «صد تا دیتای که معلوم نیست از
  * کجا اومدن»). PaymentConfirmationAction به‌صورت دکمهٔ درون‌ردیفی پیاده
  * شد (نه صفحهٔ جدا) — برای رزروهای آفلاینِ در انتظار.
+ *
+ * افزودهٔ فاز ۶.۱ (زیرساخت پرداخت): دکمهٔ بازپرداخت برای رزروهای confirmed
+ * اضافه شد؛ «لغو رزرو» دیگر روی رزروهای دارای پرداخت confirmed کار نمی‌کند
+ * (باید بازپرداخت شود) — هم اینجا در UI هم در admin_cancel_booking در
+ * دیتابیس همین قانون اعمال شده. هر دو عملیات از پشت
+ * lib/payments/provider.ts رد می‌شوند، نه مستقیم supabase.rpc.
  */
 export function BookingsTable({ lang }: { lang: Lang }) {
   const t = dictionary[lang]
   const supabase = createClient()
+  // فاز ۶.۱: تأیید آفلاین/بازپرداخت دیگر مستقیم supabase.rpc(...) نمی‌زنند —
+  // از پشت انتزاع provider رد می‌شوند تا وقتی HesabPay در فاز ۶.۳ وصل شد،
+  // فقط همین یک خط عوض شود (createManualPaymentProvider →
+  // یک provider واقعی)، بدون دست‌زدن به بقیهٔ این کامپوننت.
+  const paymentProvider = createManualPaymentProvider(supabase)
 
   const [bookings, setBookings] = useState<BookingRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -62,6 +73,15 @@ export function BookingsTable({ lang }: { lang: Lang }) {
   const [cancellingId, setCancellingId] = useState<string | null>(null)
   const [cancelPending, setCancelPending] = useState(false)
   const [cancelError, setCancelError] = useState<string | null>(null)
+
+  // فاز ۶.۱: بازپرداخت — قبل از این فاز اصلاً چنین قابلیتی نبود (نه دکمه‌ای،
+  // نه تابعی در دیتابیس). فقط برای رزروِ confirmed با پرداخت confirmed فعال
+  // می‌شود؛ لغوِ رزروهای پرداخت‌شده دیگر باید از همین مسیر برود (نه دکمهٔ
+  // «لغو رزرو» که حالا فقط برای pending کار می‌کند — چون admin_cancel_booking
+  // در همین فاز، لغوِ پرداخت‌های confirmed را رد می‌کند).
+  const [refundingId, setRefundingId] = useState<string | null>(null)
+  const [refundPending, setRefundPending] = useState(false)
+  const [refundError, setRefundError] = useState<string | null>(null)
 
   async function load() {
     setLoading(true)
@@ -125,9 +145,9 @@ export function BookingsTable({ lang }: { lang: Lang }) {
     if (!confirmingId) return
     setConfirmPending(true)
     setConfirmError(null)
-    const { error } = await supabase.rpc("admin_confirm_offline_payment", { p_booking_id: confirmingId })
+    const result = await paymentProvider.confirmOfflinePayment(confirmingId)
     setConfirmPending(false)
-    if (error) {
+    if (!result.ok) {
       setConfirmError(t.admin.manage.genericError)
       return
     }
@@ -146,6 +166,20 @@ export function BookingsTable({ lang }: { lang: Lang }) {
       return
     }
     setCancellingId(null)
+    await load()
+  }
+
+  async function handleRefundPayment() {
+    if (!refundingId) return
+    setRefundPending(true)
+    setRefundError(null)
+    const result = await paymentProvider.refund(refundingId, null)
+    setRefundPending(false)
+    if (!result.ok) {
+      setRefundError(t.admin.manage.genericError)
+      return
+    }
+    setRefundingId(null)
     await load()
   }
 
@@ -217,7 +251,11 @@ export function BookingsTable({ lang }: { lang: Lang }) {
                 {filtered.map((b) => {
                   const route = b.trip?.route
                   const canConfirmPayment = b.payment_method === "offline" && b.status === "pending" && b.paymentStatus === "pending"
-                  const canCancel = b.status === "pending" || b.status === "confirmed"
+                  // فاز ۶.۱: لغوِ رزروِ دارای پرداخت confirmed دیگر از این
+                  // دکمه ممکن نیست (admin_cancel_booking در دیتابیس هم همین
+                  // را رد می‌کند) — باید بازپرداخت شود، نه لغوِ بی‌اثر روی payments.
+                  const canCancel = b.status === "pending"
+                  const canRefund = b.status === "confirmed" && b.paymentStatus === "confirmed"
                   return (
                     <tr key={b.id} className="border-b border-border/40 last:border-0 hover:bg-secondary/30">
                       <td className="whitespace-nowrap px-3 py-2.5 text-sm text-foreground" dir="ltr">
@@ -311,6 +349,20 @@ export function BookingsTable({ lang }: { lang: Lang }) {
                               <XCircle className="size-4" />
                             </button>
                           )}
+                          {canRefund && (
+                            <button
+                              type="button"
+                              className={iconBtnClass}
+                              title={t.admin.bookingsPanel.refundPayment}
+                              aria-label={t.admin.bookingsPanel.refundPayment}
+                              onClick={() => {
+                                setRefundingId(b.id)
+                                setRefundError(null)
+                              }}
+                            >
+                              <RotateCcw className="size-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -346,6 +398,19 @@ export function BookingsTable({ lang }: { lang: Lang }) {
           errorMessage={cancelError}
           onConfirm={handleCancelBooking}
           onCancel={() => setCancellingId(null)}
+        />
+      )}
+
+      {refundingId && (
+        <ConfirmDialog
+          title={t.admin.bookingsPanel.refundPaymentConfirmTitle}
+          body={t.admin.bookingsPanel.refundPaymentConfirmBody}
+          confirmLabel={t.admin.bookingsPanel.refundPayment}
+          cancelLabel={t.admin.manage.cancel}
+          pending={refundPending}
+          errorMessage={refundError}
+          onConfirm={handleRefundPayment}
+          onCancel={() => setRefundingId(null)}
         />
       )}
     </div>
