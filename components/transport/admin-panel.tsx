@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Award, BarChart3, BusFront, FileText, LayoutDashboard, ListFilter, LogOut, Map, Menu, Route as RouteIcon, ShieldCheck, Ticket, Users, X } from "lucide-react"
+import { Award, BarChart3, BusFront, CreditCard, FileText, LayoutDashboard, ListFilter, LogOut, Map, Menu, Route as RouteIcon, ShieldCheck, Ticket, Users, X } from "lucide-react"
 import { dictionary } from "@/lib/i18n"
 import { useLang } from "@/lib/lang-context"
 import { createClient } from "@/lib/supabase/client"
@@ -18,6 +18,7 @@ import { CityManager } from "@/components/admin/city-manager"
 import { SiteContentManager } from "@/components/admin/site-content-manager"
 import { ResponsiveImageManager } from "@/components/admin/responsive-image-manager"
 import { AdminManager } from "@/components/admin/admin-manager"
+import { PaymentsPanel } from "@/components/admin/payments-panel"
 
 // فاز ۵.۲: آخرین بازماندهٔ دادهٔ ساختگی (lib/admin-data.ts) هم حذف شد —
 // dashboard و tab «رزروها» حالا هر دو مستقیماً از bookings/trips/payments
@@ -38,6 +39,9 @@ import { AdminManager } from "@/components/admin/admin-manager"
 // طریق allowedSections قابل‌واگذاری نیست — همیشه فقط role==='super_admin'.
 //
 // فاز ۵.۱۳: تب «محتوای سایت» با بخش جدید 'content' اضافه شد (Public CMS Lite).
+// فاز ۶.۲: تب «پرداخت‌ها» اضافه شد — بخش 'payments' از فاز ۳.۲/۵.۱۲ در
+// دیتابیس/Permission Center از قبل وجود داشت ولی تا این فاز هیچ UI
+// مستقلی نداشت (یادداشت بدهی فاز ۵.۱۲).
 type Tab =
   | "dashboard"
   | "trips"
@@ -49,6 +53,7 @@ type Tab =
   | "reports"
   | "loyalty"
   | "content"
+  | "payments"
   | "admins"
 
 const REQUIRED_SECTION: Partial<Record<Tab, string>> = {
@@ -61,6 +66,7 @@ const REQUIRED_SECTION: Partial<Record<Tab, string>> = {
   reports: "bookings",
   loyalty: "loyalty",
   content: "content",
+  payments: "payments",
   // dashboard و admins عمداً اینجا نیستند: dashboard پیش‌فرض همیشه‌قابل‌مشاهده
   // است، admins جدا (پایین) فقط بر اساس role کنترل می‌شود.
 }
@@ -113,6 +119,7 @@ export function AdminPanel({
     { key: "reports", label: t.admin.nav.reports, icon: BarChart3 },
     { key: "loyalty", label: t.admin.nav.loyalty, icon: Award },
     { key: "content", label: t.admin.nav.content, icon: FileText },
+    { key: "payments", label: t.admin.nav.payments, icon: CreditCard },
     { key: "admins", label: t.admin.nav.admins, icon: ShieldCheck },
   ]
 
@@ -234,6 +241,7 @@ export function AdminPanel({
               </div>
             </div>
           )}
+          {tab === "payments" && <PaymentsPanel lang={lang} />}
           {tab === "admins" && canOpenAdminsTab && <AdminManager lang={lang} viewerIsSuperAdmin={isSuperAdmin} />}
         </main>
       </div>

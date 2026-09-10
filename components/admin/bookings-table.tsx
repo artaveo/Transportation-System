@@ -7,7 +7,19 @@ import { cityLabel } from "@/lib/booking-data"
 import { createClient } from "@/lib/supabase/client"
 import { createManualPaymentProvider } from "@/lib/payments/provider"
 import type { PaymentMethod, PaymentStatus } from "@/lib/payments/types"
-import { ConfirmDialog, EmptyState, ErrorBanner, LoadingRows, ScrollFade, iconBtnClass } from "./admin-ui"
+import {
+  ConfirmDialog,
+  EmptyState,
+  ErrorBanner,
+  inputClass,
+  labelClass,
+  LoadingRows,
+  Modal,
+  primaryBtnClass,
+  ScrollFade,
+  secondaryBtnClass,
+  iconBtnClass,
+} from "./admin-ui"
 
 type BookingStatus = "pending" | "confirmed" | "completed" | "cancelled" | "refunded"
 
@@ -29,6 +41,7 @@ type BookingRow = {
     route: { origin: CityRef | null; destination: CityRef | null } | null
   } | null
   paymentStatus: PaymentStatus | null
+  refundedAmount: number | null
   seatNumbers: string[]
 }
 
@@ -79,7 +92,12 @@ export function BookingsTable({ lang }: { lang: Lang }) {
   // می‌شود؛ لغوِ رزروهای پرداخت‌شده دیگر باید از همین مسیر برود (نه دکمهٔ
   // «لغو رزرو» که حالا فقط برای pending کار می‌کند — چون admin_cancel_booking
   // در همین فاز، لغوِ پرداخت‌های confirmed را رد می‌کند).
-  const [refundingId, setRefundingId] = useState<string | null>(null)
+  // فاز ۶.۲: بازپرداخت جزئی هم مجاز شد (تصمیم صریح Zakir) — پس دیگر یک
+  // ConfirmDialog سادهٔ بدون ورودی کافی نیست؛ مبلغ (پیش‌فرض کامل، قابل‌کاهش)
+  // و دلیل اختیاری از خودِ ادمین گرفته می‌شود.
+  const [refundingBooking, setRefundingBooking] = useState<BookingRow | null>(null)
+  const [refundAmountInput, setRefundAmountInput] = useState("")
+  const [refundReasonInput, setRefundReasonInput] = useState("")
   const [refundPending, setRefundPending] = useState(false)
   const [refundError, setRefundError] = useState<string | null>(null)
 
@@ -95,7 +113,7 @@ export function BookingsTable({ lang }: { lang: Lang }) {
          trip:trips(service_date,
            route:routes(origin:cities!routes_origin_city_id_fkey(name_en, name_fa),
                         destination:cities!routes_destination_city_id_fkey(name_en, name_fa))),
-         payments(status, created_at),
+         payments(status, created_at, refunded_amount),
          booking_passengers(trip_seats(seat_number))`,
       )
       .order("created_at", { ascending: false })
@@ -121,6 +139,7 @@ export function BookingsTable({ lang }: { lang: Lang }) {
           ...row,
           trip: trip ? { service_date: trip.service_date, route: route ? { origin: unwrap(route.origin), destination: unwrap(route.destination) } : null } : null,
           paymentStatus: payments[0]?.status ?? null,
+          refundedAmount: payments[0]?.refunded_amount ?? null,
           seatNumbers,
         }
       }),
@@ -170,16 +189,21 @@ export function BookingsTable({ lang }: { lang: Lang }) {
   }
 
   async function handleRefundPayment() {
-    if (!refundingId) return
+    if (!refundingBooking) return
+    const amount = Number(refundAmountInput)
+    if (!Number.isFinite(amount) || amount <= 0 || amount > refundingBooking.total_amount) {
+      setRefundError(t.admin.bookingsPanel.refundInvalidAmount)
+      return
+    }
     setRefundPending(true)
     setRefundError(null)
-    const result = await paymentProvider.refund(refundingId, null)
+    const result = await paymentProvider.refund(refundingBooking.id, amount, refundReasonInput.trim() || null)
     setRefundPending(false)
     if (!result.ok) {
       setRefundError(t.admin.manage.genericError)
       return
     }
-    setRefundingId(null)
+    setRefundingBooking(null)
     await load()
   }
 
@@ -299,6 +323,11 @@ export function BookingsTable({ lang }: { lang: Lang }) {
                         ) : (
                           "—"
                         )}
+                        {b.paymentStatus === "refunded" && b.refundedAmount != null && b.refundedAmount < b.total_amount && (
+                          <div className="mt-1 text-xs text-muted-foreground" dir="ltr">
+                            {localizeNumber(b.refundedAmount, lang)} / {localizeNumber(b.total_amount, lang)} {t.routes.currency}
+                          </div>
+                        )}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2.5 text-sm">
                         <span
@@ -356,7 +385,9 @@ export function BookingsTable({ lang }: { lang: Lang }) {
                               title={t.admin.bookingsPanel.refundPayment}
                               aria-label={t.admin.bookingsPanel.refundPayment}
                               onClick={() => {
-                                setRefundingId(b.id)
+                                setRefundingBooking(b)
+                                setRefundAmountInput(String(b.total_amount))
+                                setRefundReasonInput("")
                                 setRefundError(null)
                               }}
                             >
@@ -401,17 +432,49 @@ export function BookingsTable({ lang }: { lang: Lang }) {
         />
       )}
 
-      {refundingId && (
-        <ConfirmDialog
-          title={t.admin.bookingsPanel.refundPaymentConfirmTitle}
-          body={t.admin.bookingsPanel.refundPaymentConfirmBody}
-          confirmLabel={t.admin.bookingsPanel.refundPayment}
-          cancelLabel={t.admin.manage.cancel}
-          pending={refundPending}
-          errorMessage={refundError}
-          onConfirm={handleRefundPayment}
-          onCancel={() => setRefundingId(null)}
-        />
+      {refundingBooking && (
+        <Modal title={t.admin.bookingsPanel.refundPaymentConfirmTitle} onClose={() => setRefundingBooking(null)}>
+          <p className="text-sm text-muted-foreground">{t.admin.bookingsPanel.refundPaymentConfirmBody}</p>
+          <div className="mt-4 space-y-3">
+            <div>
+              <label className={labelClass}>{t.admin.bookingsPanel.refundAmountLabel}</label>
+              <input
+                type="number"
+                dir="ltr"
+                min={0.01}
+                max={refundingBooking.total_amount}
+                step="0.01"
+                value={refundAmountInput}
+                onChange={(e) => setRefundAmountInput(e.target.value)}
+                className={inputClass}
+              />
+              <p className="mt-1 text-xs text-muted-foreground" dir="ltr">
+                {t.admin.bookingsPanel.refundFullAmountHint}: {localizeNumber(refundingBooking.total_amount, lang)} {t.routes.currency}
+              </p>
+            </div>
+            <div>
+              <label className={labelClass}>
+                {t.admin.bookingsPanel.refundReasonLabel} <span className="text-muted-foreground">({t.admin.manage.optional})</span>
+              </label>
+              <textarea
+                value={refundReasonInput}
+                onChange={(e) => setRefundReasonInput(e.target.value)}
+                rows={2}
+                className={inputClass}
+              />
+            </div>
+          </div>
+          {refundError && <ErrorBanner message={refundError} className="mt-3" />}
+          <div className="mt-5 flex justify-end gap-2">
+            <button type="button" className={secondaryBtnClass} onClick={() => setRefundingBooking(null)} disabled={refundPending}>
+              {t.admin.manage.cancel}
+            </button>
+            <button type="button" className={primaryBtnClass} onClick={handleRefundPayment} disabled={refundPending}>
+              {refundPending && <Loader2 className="size-3.5 animate-spin" />}
+              {t.admin.bookingsPanel.refundPayment}
+            </button>
+          </div>
+        </Modal>
       )}
     </div>
   )

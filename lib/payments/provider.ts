@@ -18,7 +18,11 @@ import type { PaymentActionResult, PaymentProviderName } from "./types"
 export interface PaymentProvider {
   readonly name: PaymentProviderName
   confirmOfflinePayment(bookingId: string): Promise<PaymentActionResult>
-  refund(bookingId: string, reason?: string | null): Promise<PaymentActionResult>
+  /**
+   * amount=null یعنی بازپرداخت کامل (مبلغ کامل پرداخت). فاز ۶.۲: بازپرداخت
+   * جزئی هم مجاز است (مثلاً کسر جریمهٔ لغو) — تصمیم صریح Zakir.
+   */
+  refund(bookingId: string, amount: number | null, reason?: string | null): Promise<PaymentActionResult>
 }
 
 type SupabaseBrowserClient = ReturnType<typeof createClient>
@@ -31,9 +35,10 @@ export function createManualPaymentProvider(supabase: SupabaseBrowserClient): Pa
       if (error) return { ok: false, error: error.message }
       return { ok: true }
     },
-    async refund(bookingId, reason) {
+    async refund(bookingId, amount, reason) {
       const { error } = await supabase.rpc("admin_refund_payment", {
         p_booking_id: bookingId,
+        p_amount: amount ?? undefined,
         p_reason: reason ?? undefined,
       })
       if (error) return { ok: false, error: error.message }

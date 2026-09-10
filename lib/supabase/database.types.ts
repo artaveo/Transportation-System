@@ -698,6 +698,7 @@ export type Database = {
           provider_reference: string | null
           raw_response: Json | null
           refund_reason: string | null
+          refunded_amount: number | null
           refunded_at: string | null
           refunded_by_admin_id: string | null
           status: Database["public"]["Enums"]["payment_status"]
@@ -716,6 +717,7 @@ export type Database = {
           provider_reference?: string | null
           raw_response?: Json | null
           refund_reason?: string | null
+          refunded_amount?: number | null
           refunded_at?: string | null
           refunded_by_admin_id?: string | null
           status?: Database["public"]["Enums"]["payment_status"]
@@ -734,6 +736,7 @@ export type Database = {
           provider_reference?: string | null
           raw_response?: Json | null
           refund_reason?: string | null
+          refunded_amount?: number | null
           refunded_at?: string | null
           refunded_by_admin_id?: string | null
           status?: Database["public"]["Enums"]["payment_status"]
@@ -1088,7 +1091,7 @@ export type Database = {
         Returns: undefined
       }
       admin_refund_payment: {
-        Args: { p_booking_id: string; p_reason?: string }
+        Args: { p_amount?: number; p_booking_id: string; p_reason?: string }
         Returns: undefined
       }
       can_manage_admins: { Args: never; Returns: boolean }
@@ -1167,6 +1170,25 @@ export type Database = {
           is_active: boolean
           last_sign_in_at: string
           role: Database["public"]["Enums"]["admin_role"]
+        }[]
+      }
+      list_payment_audit_log: {
+        Args: { p_limit?: number }
+        Returns: {
+          actor_name: string
+          actor_type: string
+          booking_id: string
+          booking_reference: string
+          contact_name: string
+          contact_phone: string
+          from_status: Database["public"]["Enums"]["payment_status"]
+          id: string
+          note: string
+          occurred_at: string
+          payment_amount: number
+          refunded_amount: number
+          source: string
+          to_status: Database["public"]["Enums"]["payment_status"]
         }[]
       }
       log_payment_status_event: {
